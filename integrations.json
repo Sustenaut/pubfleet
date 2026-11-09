@@ -1,0 +1,91 @@
+{
+  "uses": [
+    {
+      "plugin": "crates-io.publish",
+      "paths": [
+        ".github/nightly/pubrel-version.sh"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "github.actions-oidc",
+      "paths": [
+        "src/pubfleet/board_publish.py"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "github.app-token",
+      "paths": [
+        ".github/workflows/main.yml",
+        ".github/workflows/pr.yml",
+        ".github/workflows/nightly.yml"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "github.board-read",
+      "paths": [
+        "src/pubfleet/board/"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "github.repo-ops",
+      "paths": [
+        ".github/nightly/update.sh",
+        ".github/workflows/nightly.yml",
+        ".github/workflows/wheel.yml",
+        "src/pubfleet/"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "openssf.scorecard",
+      "paths": [
+        "src/pubfleet/board/connectors/scorecard.py"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "slack.post",
+      "paths": [
+        ".github/nightly/update.sh",
+        ".github/workflows/nightly.yml"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "sonarcloud.read",
+      "paths": [
+        ".github/workflows/board.yml",
+        "src/pubfleet/board/"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "sonarcloud.scan",
+      "paths": [
+        ".github/workflows/main.yml",
+        ".github/workflows/pr.yml"
+      ],
+      "mode": "required"
+    }
+  ],
+  "exclude": [
+    {
+      "path": "tests/**",
+      "reason": "Fakes of these services"
+    },
+    {
+      "path": "corpus/**",
+      "reason": "Release records, not code"
+    }
+  ],
+  "other_secrets": [
+    {
+      "name": "PUBKIT_BUMP_TOKEN",
+      "reason": "The nightly's fallback GitHub token, for when no app is set up; it reaches only GitHub"
+    }
+  ]
+}
