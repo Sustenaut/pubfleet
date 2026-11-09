@@ -1,4 +1,0 @@
-{
-  "category": "internal",
-  "change": "The actions the reusable workflows use move to their latest releases: actions/checkout 7.0.1, actions/setup-python 7.1.0, actions/cache 6.1.0 and actions/upload-artifact 7.0.2, and the integrations scan to integrations' main"
-}
