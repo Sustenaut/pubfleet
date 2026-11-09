@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "pubfleet, what a control plane runs across many repositories, split out of pubkit: pubfleet board, board-publish, state, variables and freshness, with the reusable board.yml and nightly.yml, which runs pubkit nightly in each governed checkout and installs the pubkit pubfleet's lock pins (or the release its pubkit input names); it imports pubkit as a library, through the names its README lists"
-}
