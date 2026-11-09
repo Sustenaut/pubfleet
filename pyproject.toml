@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pubfleet"
+version = "0.1.0"
+description = "What a control plane runs across many repositories: the board, the state file, their GitHub variables, freshness, and the nightly's loop."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "David Schryer", email = "schryer@gmail.com" }]
+# pubkit, as a library: the standard the board grades against and the GitHub
+# calls pubkit makes (README, "What pubfleet takes from pubkit"). The floor is
+# the oldest pubkit pubfleet works with; tests/requirements.lock pins the one
+# it is tested with, and nightly.yml installs that one.
+dependencies = ["pubkit>=0.33.0"]
+
+[project.urls]
+Repository = "https://github.com/Sustenaut/pubfleet"
+
+[project.scripts]
+pubfleet = "pubfleet.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"pubfleet.board" = ["rules.json"]
+
+# `make functional` measures the suite, the `pubfleet` processes it starts
+# included, into coverage/coverage.xml for SonarQube Cloud.
+[tool.coverage.run]
+source = ["pubfleet"]
+patch = ["subprocess", "execv"]
+parallel = true
+
+[tool.coverage.xml]
+output = "coverage/coverage.xml"

@@ -1,0 +1,23 @@
+{
+  "name": "pubfleet",
+  "package": "pkg.pubfleet",
+  "tag": "PKG-PUBFLT-11-2026",
+  "corpus": "corpus",
+  "manifest": {
+    "kind": "pyproject",
+    "path": "pyproject.toml"
+  },
+  "code": [
+    "src/",
+    "pyproject.toml",
+    ".github/workflows/board.yml",
+    ".github/workflows/nightly.yml",
+    ".github/nightly/"
+  ],
+  "command": {
+    "name": "pubfleet",
+    "check": "pubfleet --version"
+  },
+  "install": "pip install https://github.com/Sustenaut/pubfleet/releases/download/{tag}/pubfleet-{version}-py3-none-any.whl, beside the pubkit it names",
+  "key": "pub:sha2-256:val43nsjvmitydrfklhuh7dvfk6j5zkq7xwmtha3sjzwm3jocrtq"
+}

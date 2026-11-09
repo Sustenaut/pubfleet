@@ -1,0 +1,10 @@
+# The functional suite's direct dependencies. Exact pins only; the resolved
+# set with hashes lives in requirements.lock. Regenerate it with `pubkit lock`.
+# requirements-pubkit.txt pins pubkit, which pubfleet imports at run time as
+# well as the suite's plugin: the lock's pubkit is the one pubfleet is tested
+# with, and the one nightly.yml installs.
+-r requirements-pubkit.txt
+# `make functional` measures the suite, the `pubfleet` processes it starts included.
+coverage==7.16.2
+# The workflows the suite parses.
+PyYAML==6.0.3

@@ -1,0 +1,63 @@
+"""pubfleet's suite. The steps it does not define here (`it succeeds`, `it
+prints ...`) are pubkit's plugin's.
+
+Steps and fixtures more than one steps module uses live here: the scratch
+repository, running the `pubfleet` command in it, and its files. pytest-bdd
+registers a step only in the module that defines it, or in a conftest.
+"""
+
+from __future__ import annotations
+
+import shutil
+import sys
+from pathlib import Path
+
+import pytest
+from pytest_bdd import given, parsers, when
+
+
+@pytest.fixture(autouse=True)
+def offline_pubrel(tmp_path, monkeypatch):
+    """No scenario reads pubrel's tags from GitHub: its repository is one
+    that is not there (pubkit's refs.py, which the freshness rows read
+    through)."""
+    monkeypatch.setenv("PUBKIT_PUBREL_REMOTE", str(tmp_path / "no-pubrel"))
+    monkeypatch.delenv("PUBKIT_RELEASE_COMMIT", raising=False)
+
+
+@pytest.fixture
+def repo(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    return root
+
+
+def pubfleet():
+    """The `pubfleet` installed beside the Python running this suite."""
+    found = shutil.which("pubfleet", path=str(Path(sys.executable).parent))
+    assert found, "pubfleet is not installed in this environment; run `make venv`"
+    return found
+
+
+@given("an empty repository")
+def empty(repo):
+    pass
+
+
+@given(parsers.parse('the file "{path}" reads "{text}"'))
+@when(parsers.parse('the file "{path}" reads "{text}"'))
+def file_reads(repo, path, text):
+    target = repo / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text + "\n")
+
+
+@pytest.fixture
+def env():
+    return {}
+
+
+@when(parsers.re(r'I run pubfleet (?P<args>(?:"[^"]*" ?)+)'), target_fixture="result")
+def run_pubfleet(repo, run, env, args):
+    variables = {k: v for k, v in env.items() if k != "resolved"}
+    return run(pubfleet(), *args.strip().strip('"').split('" "'), cwd=repo, env=variables)
