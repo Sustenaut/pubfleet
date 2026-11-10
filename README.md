@@ -12,7 +12,7 @@ checkout.
 
     pubfleet board --out DIR --repos FILE [--rules FILE] [--replay FILE] [--record FILE]
     pubfleet board-publish --url URL --tenant TENANT [--file FILE]
-    pubfleet state --check | --repos-for board|govern [FILE]
+    pubfleet state --check | --repos-for board|govern|deploy [FILE]
     pubfleet variables --check|--apply [--state FILE] [--repos FILE | REPO...]
     pubfleet freshness [--json] (DIR... | --repos FILE [DIR])
     pubfleet --version
@@ -159,7 +159,7 @@ write` and no secret, and the tenant must let that job write.
 ### State files
 
     pubkit state --check [FILE]
-    pubkit state --repos-for board|govern [FILE]
+    pubkit state --repos-for board|govern|deploy [FILE]
 
 `--check` checks a state repository's `state.json` (by default in the working directory),
 which a control plane keeps for one GitHub owner, and `--repos-for` prints the repos file
@@ -168,12 +168,18 @@ for one of its roles:
 ```json
 { "owner": "example-org",
   "repos": {
-    "some-tool": { "project": "tools", "board": true, "protect": true, "govern": true }
+    "some-tool": { "project": "tools", "board": true, "protect": true, "govern": true },
+    "some-service": { "board": true, "protect": true, "govern": true, "deploy": true }
 } }
 ```
 
+`deploy`, optional and false when left out, marks a repository the convergence
+engine walks: the state says whether, and the repository's `pubkit.json` deploy
+block says how.
+
 It checks the file's shape, then through `gh` that each repository exists under
-the owner, and that each with `protect` has a sound protect block. `gh` needs a
+the owner, that each with `protect` has a sound protect block, and that each with
+`deploy` has a deploy block. `gh` needs a
 token that can read every repository named, which a workflow's own
 `GITHUB_TOKEN` can't. It builds nothing, so it suits being a state repository's
 one required check.

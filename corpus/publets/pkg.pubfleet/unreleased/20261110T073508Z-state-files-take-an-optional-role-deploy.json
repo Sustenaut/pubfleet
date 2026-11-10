@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "State files take an optional role deploy, false when left out: state --check wants a deploy block in each such repository's pubkit.json, and state --repos-for deploy lists them"
+}
