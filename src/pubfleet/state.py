@@ -3,12 +3,14 @@
 
     {"owner": "OWNER",
      "repos": {"NAME": {"project": "some-group", "board": true, "protect": true, "govern": false,
-                        "variables": {"SOME_SETTING": "a value"}}}}
+                        "deploy": true, "variables": {"SOME_SETTING": "a value"}}}}
 
 One file per GitHub owner says which of its repositories are graded, protected
 and governed. This checks its shape, that each repository exists under the
 owner, and that each one with `protect` has a protect block in its pubkit.json,
-since that block is what says how, and that the repository has reported every check
+since that block is what says how, that each one with `deploy` (optional, false
+when left out: the convergence engine walks the repositories that have it) has a
+deploy block there, for the same reason, and that the repository has reported every check
 the block requires, since a ruleset requiring one it never reports stops anything
 merging. A repository's `variables` (optional) are the values of its GitHub variables,
 which `pubfleet variables` keeps them to: each a string or JSON, and each one its own
@@ -26,13 +28,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pubkit.protect import Api, ApiError, gh, remote
+from pubkit.protect import Api, ApiError, gh, remote, remote_config
 
 from . import variables
 
 OWNER = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]*")
 NAME = re.compile(r"[A-Za-z0-9_.-]+")
 ROLES = ("board", "protect", "govern")
+# Roles a repository may leave out, as false.
+OPTIONAL = ("deploy",)
 RECENT_PULLS = 5
 
 
@@ -53,13 +57,16 @@ def shape(state: Any) -> list[str]:
         if not isinstance(roles, dict):
             out.append(f"{name}: its roles must be an object, not {json.dumps(roles)}")
             continue
-        for key in sorted(roles.keys() - {"project", variables.BLOCK, *ROLES}):
-            out.append(f"{name}: {key} is not a setting; it takes project, board, protect, govern "
-                       f"and variables")
+        for key in sorted(roles.keys() - {"project", variables.BLOCK, *ROLES, *OPTIONAL}):
+            out.append(f"{name}: {key} is not a setting; it takes project, board, protect, govern, "
+                       f"deploy and variables")
         if variables.BLOCK in roles:
             out += [f"{name}: {p}" for p in variables.value_problems(roles[variables.BLOCK])]
         for role in ROLES:
             if not isinstance(roles.get(role), bool):
+                out.append(f"{name}: \"{role}\" must be true or false")
+        for role in OPTIONAL:
+            if not isinstance(roles.get(role, False), bool):
                 out.append(f"{name}: \"{role}\" must be true or false")
         if not isinstance(roles.get("project", ""), str) or roles.get("project") == "":
             out.append(f"{name}: \"project\" must be a name")
@@ -109,6 +116,14 @@ def on_github(api: Api, owner: str, repos: dict) -> list[str]:
                 if check not in seen:
                     out.append(f"{slug} requires the check \"{check}\", which it hasn't reported "
                                f"lately, so nothing could merge there")
+        if roles.get("deploy"):
+            try:
+                config = remote_config(api, slug)
+            except ValueError as e:
+                out.append(f"{slug} has \"deploy\" on, but {e}")
+            else:
+                if not isinstance(config, dict) or not isinstance(config.get("deploy"), dict):
+                    out.append(f"{slug} has \"deploy\" on, but its pubkit.json has no deploy block")
         if values := roles.get(variables.BLOCK):
             try:
                 block = variables.declared(api, slug)
@@ -126,7 +141,7 @@ def repos_file(state: dict, role: str) -> dict:
     file's order. Nothing else reads a state file's roles."""
     entries = []
     for name, roles in state["repos"].items():
-        if roles[role]:
+        if roles.get(role, False):
             entry = {"repo": f"{state['owner']}/{name}", "protect": roles["protect"],
                      "govern": roles["govern"]}
             if roles.get("project"):

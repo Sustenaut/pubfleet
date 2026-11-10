@@ -2,7 +2,7 @@
 
     pubfleet board --out DIR --repos FILE [--rules FILE] [--replay FILE] [--record FILE]
     pubfleet board-publish --url URL --tenant TENANT [--file FILE]
-    pubfleet state --check | --repos-for board|govern [FILE]
+    pubfleet state --check | --repos-for board|govern|deploy [FILE]
     pubfleet variables --check|--apply [--state FILE] [--repos FILE | REPO...]
     pubfleet freshness [--json] (DIR... | --repos FILE [DIR])
 
@@ -46,7 +46,7 @@ def parser() -> argparse.ArgumentParser:
     what = p.add_mutually_exclusive_group(required=True)
     what.add_argument("--check", action="store_true",
                       help="check its shape, that each repository exists, and each protected one's block")
-    what.add_argument("--repos-for", choices=("board", "govern"), metavar="ROLE",
+    what.add_argument("--repos-for", choices=("board", "govern", "deploy"), metavar="ROLE",
                       help="print the repos file for a role, board or govern")
     p.add_argument("file", nargs="?", type=Path, default=Path("state.json"), metavar="FILE")
     p = commands.add_parser("variables", help="keep repositories' GitHub variables to the values "

@@ -75,6 +75,29 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     Then it does not succeed
     And it prints "example-org/one has "protect" on, but its pubkit.json has no protect block"
 
+  Scenario: A repository with deploy on needs a deploy block
+    Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}, "two": {"board": true, "protect": false, "govern": false, "deploy": true}}}"
+    And "example-org/one" has the pubkit.json "{"kind": "service", "deploy": {"namespace": "one"}}"
+    And "example-org/two" has the pubkit.json "{"kind": "service"}"
+    When I run pubfleet "state" "--check"
+    Then it does not succeed
+    And it prints "example-org/two has "deploy" on, but its pubkit.json has no deploy block"
+    And it does not print "example-org/one has"
+
+  Scenario: A repository with deploy on and no pubkit.json says so
+    Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}}}"
+    And "example-org/one" exists
+    When I run pubfleet "state" "--check"
+    Then it does not succeed
+    And it prints "example-org/one has "deploy" on, but no pubkit.json on its default branch"
+
+  Scenario: The repos file for deploy lists the repositories the convergence engine walks
+    Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}, "two": {"board": true, "protect": false, "govern": false}}}"
+    When I run pubfleet "state" "--repos-for" "deploy"
+    Then it succeeds
+    And it prints "example-org/one"
+    And it does not print "example-org/two"
+
   Scenario: GitHub refusing is not taken for a missing repository
     Given the state of "example-org" has "one" with protect off and "two" with protect off
     And "example-org/one" exists
@@ -109,6 +132,7 @@ Feature: A state file says which repositories an owner has, and a repos file whi
       | {"owner": "o", "repos": {"a": {"board": 1, "protect": true, "govern": true}}}                  | "board" must be true or false    |
       | {"owner": "o", "repos": {"a": {"board": true, "protect": true, "govern": true, "x": 1}}}       | x is not a setting               |
       | {"owner": "o", "repos": {"a": {"board": true, "protect": true, "govern": true, "project": 1}}} | "project" must be a name         |
+      | {"owner": "o", "repos": {"a": {"board": true, "protect": true, "govern": true, "deploy": 1}}}  | "deploy" must be true or false   |
 
   Scenario: A state file that can't be read says so
     Given the file "state.json" reads "nonsense"
