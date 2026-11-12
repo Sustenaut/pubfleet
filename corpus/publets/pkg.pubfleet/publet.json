@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubfleet 0.1.0 is released as v0.1.0 from commit d143eef084ff25ffa1d2115352bb8d40b5b63ae1.",
+      "content": "pubfleet 0.1.1 is released as v0.1.1 from commit 678f05dccd00825dc3df3cca26915cf8a65f5d3a.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubfleet",
-            "0.1.0",
+            "0.1.1",
             "pubfleet --version",
-            "pubfleet 0.1.0",
-            "v0.1.0",
-            "d143eef084ff25ffa1d2115352bb8d40b5b63ae1"
+            "pubfleet 0.1.1",
+            "v0.1.1",
+            "678f05dccd00825dc3df3cca26915cf8a65f5d3a"
           ]
         ]
       },
-      "scope": "the published release v0.1.0 of pubfleet",
+      "scope": "the published release v0.1.1 of pubfleet",
       "sources": [
         {
           "ref": "pubfleet",
-          "revision": "d143eef084ff25ffa1d2115352bb8d40b5b63ae1"
+          "revision": "678f05dccd00825dc3df3cca26915cf8a65f5d3a"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubfleet 0.1.0 was released on 2026-11-09 from commit d143eef084ff25ffa1d2115352bb8d40b5b63ae1 with these changes.",
+      "content": "pubfleet 0.1.1 was released on 2026-11-12 from commit 678f05dccd00825dc3df3cca26915cf8a65f5d3a with these changes.",
       "data": {
         "columns": [
           {
@@ -58,27 +58,23 @@
         "rows": [
           [
             "added",
-            "pubfleet, what a control plane runs across many repositories, split out of pubkit: pubfleet board, board-publish, state, variables and freshness, with the reusable board.yml and nightly.yml, which runs pubkit nightly in each governed checkout and installs the pubkit pubfleet's lock pins (or the release its pubkit input names); it imports pubkit as a library, through the names its README lists"
-          ],
-          [
-            "internal",
-            "The actions the reusable workflows use move to their latest releases: actions/checkout 7.0.1, actions/setup-python 7.1.0, actions/cache 6.1.0 and actions/upload-artifact 7.0.2, and the integrations scan to integrations' main"
+            "State files take an optional role deploy, false when left out: state --check wants a deploy block in each such repository's pubkit.json, and state --repos-for deploy lists them"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.1.0 of pubfleet",
+      "scope": "the published release v0.1.1 of pubfleet",
       "sources": [
         {
           "ref": "pubfleet",
-          "revision": "d143eef084ff25ffa1d2115352bb8d40b5b63ae1"
+          "revision": "678f05dccd00825dc3df3cca26915cf8a65f5d3a"
         }
       ]
     }
   },
-  "created": "2026-11-09T00:00:00Z",
+  "created": "2026-11-12T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
