@@ -289,3 +289,38 @@ def install_fails(installed, text):
     assert installed["done"].returncode != 0
     assert text in installed["done"].stderr
     assert len(installed["pip"]) == 2
+
+
+GUARD = GITHUB / "nightly" / "not-backwards.sh"
+
+
+def _guard(tmp_path, pinned, installed):
+    import os
+    import subprocess
+    repo, bin_dir = tmp_path / "repo", tmp_path / "bin"
+    repo.mkdir()
+    bin_dir.mkdir()
+    if pinned:
+        (repo / "pubkit").write_text(f"#!/usr/bin/env bash\n# Managed by pubkit {pinned}: `pubkit sync` rewrites this file\n")
+    fake = bin_dir / "pubkit"
+    fake.write_text(f"#!/bin/sh\necho pubkit {installed}\n")
+    fake.chmod(0o755)
+    env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
+    return subprocess.run([str(GUARD), str(repo)], env=env, capture_output=True, text=True, check=False)
+
+
+def test_the_nightly_never_moves_a_repository_to_an_older_pubkit(tmp_path):
+    ran = _guard(tmp_path, "0.35.0", "0.33.0")
+    assert ran.returncode == 1
+    assert ran.stdout.strip() == "it runs pubkit 0.35.0, newer than tonight's 0.33.0: not moved back"
+
+
+@pytest.mark.parametrize(("pinned", "installed"), [("0.33.0", "0.36.0"), ("0.36.0", "0.36.0"), ("0.9.9", "0.10.0"),
+                                                   (None, "0.33.0")])
+def test_the_same_or_a_newer_pubkit_goes_on(tmp_path, pinned, installed):
+    assert _guard(tmp_path, pinned, installed).returncode == 0
+
+
+def test_the_update_script_checks_before_it_moves_anything():
+    text = SCRIPT.read_text()
+    assert text.index("not-backwards.sh") < text.index("pubkit nightly")
