@@ -2,7 +2,7 @@
 
     pubfleet board --out DIR --repos FILE [--rules FILE] [--replay FILE] [--record FILE]
     pubfleet board-publish --url URL --tenant TENANT [--file FILE]
-    pubfleet state --check | --repos-for board|govern|deploy [FILE]
+    pubfleet state --check | --repos-for board|govern|deploy | --discover [--body PATH] [FILE]
     pubfleet variables --check|--apply [--state FILE] [--repos FILE | REPO...]
     pubfleet freshness [--json] (DIR... | --repos FILE [DIR])
 
@@ -48,6 +48,11 @@ def parser() -> argparse.ArgumentParser:
                       help="check its shape, that each repository exists, and each protected one's block")
     what.add_argument("--repos-for", choices=("board", "govern", "deploy"), metavar="ROLE",
                       help="print the repos file for a role, board or govern")
+    what.add_argument("--discover", action="store_true",
+                      help="add the owner's repositories the file lacks (on the board, protect "
+                           "where their pubkit.json says how, not governed), and print how many")
+    p.add_argument("--body", type=Path, metavar="PATH",
+                   help="with --discover: write a pull request's description there")
     p.add_argument("file", nargs="?", type=Path, default=Path("state.json"), metavar="FILE")
     p = commands.add_parser("variables", help="keep repositories' GitHub variables to the values "
                                               "a state file gives them")
@@ -87,6 +92,10 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911 - one branch pe
         from .state import check, repos_for  # noqa: PLC0415
         if args.repos_for:
             return repos_for(confined(args.file, "the state file"), args.repos_for)
+        if args.discover:
+            from .discover import run as discover  # noqa: PLC0415
+            return discover(confined(args.file, "the state file"),
+                            confined(args.body, "the body file") if args.body else None)
         return check(confined(args.file, "the state file"))
     if args.command == "board-publish":
         from .board_publish import run as publish  # noqa: PLC0415

@@ -12,7 +12,7 @@ checkout.
 
     pubfleet board --out DIR --repos FILE [--rules FILE] [--replay FILE] [--record FILE]
     pubfleet board-publish --url URL --tenant TENANT [--file FILE]
-    pubfleet state --check | --repos-for board|govern|deploy [FILE]
+    pubfleet state --check | --repos-for board|govern|deploy | --discover [--body PATH] [FILE]
     pubfleet variables --check|--apply [--state FILE] [--repos FILE | REPO...]
     pubfleet freshness [--json] (DIR... | --repos FILE [DIR])
     pubfleet --version
@@ -160,6 +160,7 @@ write` and no secret, and the tenant must let that job write.
 
     pubkit state --check [FILE]
     pubkit state --repos-for board|govern|deploy [FILE]
+    pubkit state --discover [--body PATH] [FILE]
 
 `--check` checks a state repository's `state.json` (by default in the working directory),
 which a control plane keeps for one GitHub owner, and `--repos-for` prints the repos file
@@ -172,6 +173,15 @@ for one of its roles:
     "some-service": { "board": true, "protect": true, "govern": true, "deploy": true }
 } }
 ```
+
+`--discover` adds the owner's repositories the file does not list yet, archived ones
+and forks left out: each on the board, protected when its own `pubkit.json` has a protect
+block (which `--check` requires of protect), and not governed, with no project and no
+deploy. It rewrites the file as state files are kept (two-space JSON, repositories in name
+order), prints how many it added, and with `--body` writes a pull request's description:
+each one added, its visibility and why protect is on or off, and the listed repositories
+that are archived or gone, which it never removes. A state repository's nightly runs it
+and opens that pull request for an operator to merge.
 
 `deploy`, optional and false when left out, marks a repository the convergence
 engine walks: the state says whether, and the repository's `pubkit.json` deploy

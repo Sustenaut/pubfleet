@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubfleet state --discover adds the owner's repositories a state file lacks (archived ones and forks left out): on the board, protected where their own pubkit.json has a protect block, not governed; --body writes a pull request's description naming each one, and the listed repositories that are archived or gone, which it never removes"
+}
