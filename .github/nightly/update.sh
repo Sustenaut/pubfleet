@@ -53,6 +53,13 @@ wait_ci() {
 }
 
 git checkout -q -B "$branch" origin/main
+# Never to an older pubkit than main already runs: the open pull request, if any,
+# is left for a night whose pubkit is new enough.
+if ! why=$("$(dirname "$0")/not-backwards.sh" .); then
+  echo "$REPO: $why." >> "$summary"
+  echo "::warning::$REPO: $why"
+  exit 0
+fi
 made=$(pubkit nightly --pubrel "$PUBREL" --body "$body" | tail -n 1)
 pr=$(gh pr list --repo "$REPO" --head "$branch" --state open --json number --jq '.[0].number // empty')
 
