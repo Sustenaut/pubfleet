@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pubfleet"
-version = "0.1.1"
+version = "0.1.2"
 description = "What a control plane runs across many repositories: the board, the state file, their GitHub variables, freshness, and the nightly's loop."
 readme = "README.md"
 license = "Apache-2.0"

@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubfleet 0.1.1 is released as v0.1.1 from commit 761928422d560340c5c994d6a326b5788f2cbf58.",
+      "content": "pubfleet 0.1.2 is released as v0.1.2 from commit e0c7075e26ba26bfface4fc628f0639062dd6dca.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubfleet",
-            "0.1.1",
+            "0.1.2",
             "pubfleet --version",
-            "pubfleet 0.1.1",
-            "v0.1.1",
-            "761928422d560340c5c994d6a326b5788f2cbf58"
+            "pubfleet 0.1.2",
+            "v0.1.2",
+            "e0c7075e26ba26bfface4fc628f0639062dd6dca"
           ]
         ]
       },
-      "scope": "the published release v0.1.1 of pubfleet",
+      "scope": "the published release v0.1.2 of pubfleet",
       "sources": [
         {
           "ref": "pubfleet",
-          "revision": "761928422d560340c5c994d6a326b5788f2cbf58"
+          "revision": "e0c7075e26ba26bfface4fc628f0639062dd6dca"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubfleet 0.1.1 was released on 2026-11-12 from commit 761928422d560340c5c994d6a326b5788f2cbf58 with these changes.",
+      "content": "pubfleet 0.1.2 was released on 2026-11-13 from commit e0c7075e26ba26bfface4fc628f0639062dd6dca with these changes.",
       "data": {
         "columns": [
           {
@@ -57,24 +57,24 @@
         ],
         "rows": [
           [
-            "added",
-            "State files take an optional role deploy, false when left out: state --check wants a deploy block in each such repository's pubkit.json, and state --repos-for deploy lists them"
+            "fixed",
+            "The nightly never moves a repository to an older pubkit than its ./pubkit runs: with a pubfleet release whose lock lagged, it moved pubrel from pubkit 0.35.0 back to 0.33.0 (pubrel#97); such a repository is now left as it is, and said so"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.1.1 of pubfleet",
+      "scope": "the published release v0.1.2 of pubfleet",
       "sources": [
         {
           "ref": "pubfleet",
-          "revision": "761928422d560340c5c994d6a326b5788f2cbf58"
+          "revision": "e0c7075e26ba26bfface4fc628f0639062dd6dca"
         }
       ]
     }
   },
-  "created": "2026-11-12T00:00:00Z",
+  "created": "2026-11-13T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
