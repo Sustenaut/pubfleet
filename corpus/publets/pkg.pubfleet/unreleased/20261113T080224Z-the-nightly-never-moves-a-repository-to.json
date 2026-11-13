@@ -1,4 +1,0 @@
-{
-  "category": "fixed",
-  "change": "The nightly never moves a repository to an older pubkit than its ./pubkit runs: with a pubfleet release whose lock lagged, it moved pubrel from pubkit 0.35.0 back to 0.33.0 (pubrel#97); such a repository is now left as it is, and said so"
-}
