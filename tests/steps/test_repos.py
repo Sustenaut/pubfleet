@@ -47,6 +47,12 @@ if c:
     else:
         print(json.dumps({{"statuses": [{{"context": n}} for n in found.get("statuses", [])]}}))
     sys.exit(0)
+o = re.match(r"orgs/([^/]+)/repos\\?.*page=(\\d+)", url)
+if o:
+    found = [dict(name=slug.split("/", 1)[1], **meta) for slug, meta in state["repos"].items()
+             if slug.split("/", 1)[0] == o.group(1) and "full_name" not in meta]
+    print(json.dumps(found if o.group(2) == "1" else []))
+    sys.exit(0)
 f = re.match(r"repos/([^/]+/[^/]+)/contents/pubkit.json$", url)
 if f:
     if f.group(1) not in state["files"]:
@@ -235,3 +241,36 @@ def board_input(workflow, name):
     run = next(s for s in workflow["data"]["jobs"]["board"]["steps"] if "pubfleet board" in s.get("run", ""))
     assert "--repos .pubkit-repos.json" in run["run"]
     assert run["env"]["REPOS"] == "${{ inputs.repos }}"
+
+
+@given(parsers.parse('"{slug}" is archived'))
+def archived(github, slug):
+    _edit(github, lambda state: (_exists(state, slug), state["repos"][slug].__setitem__("archived", True)))
+
+
+@given(parsers.parse('"{slug}" is a fork'))
+def fork(github, slug):
+    _edit(github, lambda state: (_exists(state, slug), state["repos"][slug].__setitem__("fork", True)))
+
+
+@then(parsers.parse('the state file lists "{name}" as {roles}'))
+def lists_as(repo, name, roles):
+    state = json.loads((repo / "state.json").read_text())
+    want = {"board": True, "protect": "protect on" in roles, "govern": False}
+    assert state["repos"][name] == want, state["repos"].get(name)
+
+
+@then(parsers.parse('the state file lists only "{names}"'))
+def lists_only(repo, names):
+    state = json.loads((repo / "state.json").read_text())
+    assert list(state["repos"]) == names.split(", "), list(state["repos"])
+
+
+@then(parsers.parse('"{path}" says "{text}"'))
+def file_says(repo, path, text):
+    assert text in (repo / path).read_text(), (repo / path).read_text()
+
+
+@then(parsers.parse('there is no "{path}"'))
+def no_file(repo, path):
+    assert not (repo / path).exists()

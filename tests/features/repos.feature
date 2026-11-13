@@ -192,3 +192,41 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And "example-org/two" exists
     When I run pubfleet "state" "--check"
     Then it succeeds
+
+  Scenario: --discover adds the owner's repositories the state file lacks, by what each one's pubkit.json says
+    Given the state of "example-org" has "one" with protect off and "two" with protect off
+    And "example-org/one" exists
+    And "example-org/two" exists
+    And "example-org/three" has a protect block requiring "ci / passed"
+    And "example-org/four" has the pubkit.json "{"kind": "utility"}"
+    And "example-org/five" exists
+    And "example-org/old" is archived
+    And "example-org/copy" is a fork
+    When I run pubfleet "state" "--discover" "--body" "body.md"
+    Then it succeeds
+    And it prints "3"
+    And the state file lists only "five, four, one, three, two"
+    And the state file lists "three" as on the board with protect on, not governed
+    And the state file lists "four" as on the board with protect off, not governed
+    And the state file lists "five" as on the board with protect off, not governed
+    And "body.md" says "| three | public | on: its pubkit.json has a protect block |"
+    And "body.md" says "| five | public | off: no protect block in its pubkit.json |"
+    When I run pubfleet "state" "--check"
+    Then it succeeds
+
+  Scenario: --discover names the listed repositories that are archived or gone, and keeps them
+    Given the state of "example-org" has "one" with protect off and "gone" with protect off
+    And "example-org/one" exists
+    And "example-org/new" exists
+    When I run pubfleet "state" "--discover" "--body" "body.md"
+    Then it prints "1"
+    And the state file lists only "gone, new, one"
+    And "body.md" says "never removed by this): `gone`."
+
+  Scenario: --discover with nothing to add changes nothing and writes no description
+    Given the state of "example-org" has "one" with protect off and "two" with protect off
+    And "example-org/one" exists
+    And "example-org/two" exists
+    When I run pubfleet "state" "--discover" "--body" "body.md"
+    Then it prints "0"
+    And there is no "body.md"
