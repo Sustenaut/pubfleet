@@ -297,7 +297,7 @@ GUARD = GITHUB / "nightly" / "not-backwards.sh"
 def _guard(tmp_path, pinned, installed):
     import os
     import subprocess
-    repo, bin_dir = tmp_path / "repo", tmp_path / "bin"
+    repo, bin_dir = tmp_path / "guarded", tmp_path / "guard-bin"
     repo.mkdir()
     bin_dir.mkdir()
     if pinned:
@@ -309,18 +309,32 @@ def _guard(tmp_path, pinned, installed):
     return subprocess.run([str(GUARD), str(repo)], env=env, capture_output=True, text=True, check=False)
 
 
-def test_the_nightly_never_moves_a_repository_to_an_older_pubkit(tmp_path):
-    ran = _guard(tmp_path, "0.35.0", "0.33.0")
-    assert ran.returncode == 1
-    assert ran.stdout.strip() == "it runs pubkit 0.35.0, newer than tonight's 0.33.0: not moved back"
+@given(parsers.parse('a repository that pins pubkit "{pinned}"'), target_fixture="pinned")
+def pins_pubkit(pinned):
+    return None if pinned == "none" else pinned
 
 
-@pytest.mark.parametrize(("pinned", "installed"), [("0.33.0", "0.36.0"), ("0.36.0", "0.36.0"), ("0.9.9", "0.10.0"),
-                                                   (None, "0.33.0")])
-def test_the_same_or_a_newer_pubkit_goes_on(tmp_path, pinned, installed):
-    assert _guard(tmp_path, pinned, installed).returncode == 0
+@when(parsers.parse('the backwards guard runs with pubkit "{installed}" installed'), target_fixture="guarded")
+def guard_runs(tmp_path, pinned, installed):
+    return _guard(tmp_path, pinned, installed)
 
 
-def test_the_update_script_checks_before_it_moves_anything():
-    text = SCRIPT.read_text()
-    assert text.index("not-backwards.sh") < text.index("pubkit nightly")
+@then(parsers.parse('the guard stops, saying "{text}"'))
+def guard_stops(guarded, text):
+    assert guarded.returncode == 1
+    assert guarded.stdout.strip() == text
+
+
+@then("the guard lets the nightly go on")
+def guard_goes_on(guarded):
+    assert guarded.returncode == 0, guarded.stdout + guarded.stderr
+
+
+@when("I read the nightly's update script", target_fixture="script")
+def update_script():
+    return SCRIPT.read_text()
+
+
+@then("it runs not-backwards.sh before pubkit nightly")
+def guard_first(script):
+    assert script.index("not-backwards.sh") < script.index("pubkit nightly")
