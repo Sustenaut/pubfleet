@@ -69,3 +69,24 @@ Feature: The nightly keeps every governed repository current, through a pull req
   Scenario: A pubkit input that is not a release tag is refused
     When the nightly installs pubfleet "v0.1.0" with the pubkit input "main"
     Then the install fails, saying "must be a release tag"
+
+  Scenario: The nightly never moves a repository to an older pubkit
+    Given a repository that pins pubkit "0.35.0"
+    When the backwards guard runs with pubkit "0.33.0" installed
+    Then the guard stops, saying "it runs pubkit 0.35.0, newer than tonight's 0.33.0: not moved back"
+
+  Scenario Outline: The same or a newer pubkit goes on
+    Given a repository that pins pubkit "<pinned>"
+    When the backwards guard runs with pubkit "<installed>" installed
+    Then the guard lets the nightly go on
+
+    Examples:
+      | pinned | installed |
+      | 0.33.0 | 0.36.0    |
+      | 0.36.0 | 0.36.0    |
+      | 0.9.9  | 0.10.0    |
+      | none   | 0.33.0    |
+
+  Scenario: The update script checks before it moves anything
+    When I read the nightly's update script
+    Then it runs not-backwards.sh before pubkit nightly
