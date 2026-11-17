@@ -17,12 +17,17 @@ which `pubfleet variables` keeps them to: each a string or JSON, and each one it
 pubrules.json declares in its variables block. That last check is the best it can be: it looks at the default branch's newest
 commit and a few recent pull requests, and says nothing when it can't read them. It is the state repository's one required
 check, so it builds nothing and takes seconds. It reads GitHub through `gh`,
-with a token that can read every repository the file names.
+with a token that can read every repository the file names. The one exception is
+the repository the check runs in (`GITHUB_REPOSITORY`, which Actions sets) when the
+file names it: its pubrules.json is the one beside the state file, the change under
+review, so a pull request that moves its own block is checked against itself.
 """
 
 from __future__ import annotations
 
+import base64
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -33,6 +38,7 @@ from pubrules.protect import Api, ApiError, gh, remote, remote_config
 from . import variables
 
 OWNER = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]*")
+OWN = "pubrules.json"
 NAME = re.compile(r"[A-Za-z0-9_.-]+")
 ROLES = ("board", "protect", "govern")
 # Roles a repository may leave out, as false.
@@ -161,12 +167,29 @@ def repos_for(path: Path, role: str) -> int:
     return 0
 
 
+def here(api: Api, path: Path) -> Api:
+    """`api`, but answering the checked-out repository's own pubrules.json from the copy
+    beside `path`, when Actions names that repository and the copy is there."""
+    slug = os.environ.get("GITHUB_REPOSITORY", "")
+    own = path.parent / OWN
+    if not slug or not own.is_file():
+        return api
+    wanted = f"repos/{slug}/contents/{OWN}".lower()
+
+    def answer(method: str, url: str, body: object) -> object:
+        if method == "GET" and url.lower() == wanted:
+            return {"type": "file", "encoding": "base64",
+                    "content": base64.b64encode(own.read_bytes()).decode("ascii")}
+        return api(method, url, body)
+    return answer
+
+
 def check(path: Path, api: Api = gh) -> int:
     try:
         state = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         sys.exit(f"pubfleet state: {path}: {e}")
-    bad = shape(state) or on_github(api, state["owner"], state["repos"])
+    bad = shape(state) or on_github(here(api, path), state["owner"], state["repos"])
     for line in bad:
         print(f"{path}: {line}")
     if bad:
