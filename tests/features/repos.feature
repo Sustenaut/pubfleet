@@ -91,6 +91,35 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     Then it does not succeed
     And it prints "example-org/one has "deploy" on, but no pubrules.json on its default branch"
 
+  Scenario: The repository the check runs in is read from its own checkout
+    Given the state of "example-org" has "state" with protect on and "two" with protect off
+    And "example-org/state" exists
+    And "example-org/two" exists
+    And the file "pubrules.json" reads "{"kind": "content", "protect": {"checks": ["state / valid"]}}"
+    And the environment sets "GITHUB_REPOSITORY" to "example-org/state"
+    When I run pubfleet "state" "--check"
+    Then it succeeds
+    And it prints "2 repositories of example-org, all sound"
+
+  Scenario: The checkout stands in only for the repository the check runs in
+    Given the state of "example-org" has "state" with protect off and "two" with protect on
+    And "example-org/state" exists
+    And "example-org/two" exists
+    And the file "pubrules.json" reads "{"kind": "content", "protect": {"checks": ["state / valid"]}}"
+    And the environment sets "GITHUB_REPOSITORY" to "example-org/state"
+    When I run pubfleet "state" "--check"
+    Then it does not succeed
+    And it prints "example-org/two has "protect" on, but no pubrules.json on its default branch"
+
+  Scenario: Without a pubrules.json beside the state file, GitHub's copy is read
+    Given the state of "example-org" has "state" with protect on and "two" with protect off
+    And "example-org/state" exists
+    And "example-org/two" exists
+    And the environment sets "GITHUB_REPOSITORY" to "example-org/state"
+    When I run pubfleet "state" "--check"
+    Then it does not succeed
+    And it prints "example-org/state has "protect" on, but no pubrules.json on its default branch"
+
   Scenario: The repos file for deploy lists the repositories the convergence engine walks
     Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}, "two": {"board": true, "protect": false, "govern": false}}}"
     When I run pubfleet "state" "--repos-for" "deploy"
