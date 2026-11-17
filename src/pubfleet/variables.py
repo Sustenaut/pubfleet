@@ -1,6 +1,6 @@
 """`pubfleet variables --check | --apply`: keep repositories' GitHub variables to a state file.
 
-A repository's pubkit.json names the variables it reads, never their values, and
+A repository's pubrules.json names the variables it reads, never their values, and
 may name the workflow that takes them in, to run once one changes:
 
     "variables": {"names": ["SOME_SETTING", "SOME_MAP"], "deploy": "deploy.yml"}
@@ -21,7 +21,7 @@ repository's `deploy` workflow on its default branch, once, if it set any. Neith
 touches a variable the state leaves out, nor removes one: dropping a variable is a
 deliberate step by hand. Each acts on every repository in the state with variables,
 or those named (NAME or OWNER/NAME), or those a repos file lists. It reads through
-`gh`, with a token that can read the repositories' pubkit.json and variables, and,
+`gh`, with a token that can read the repositories' pubrules.json and variables, and,
 for --apply, write their variables and run their workflows.
 """
 
@@ -33,9 +33,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pubkit.protect import Api, ApiError, gh, gh_set, remote_config
-from pubkit.repos import read
-from pubkit.variables import BLOCK, block_problems, name_problem
+from pubrules.protect import Api, ApiError, gh, gh_set, remote_config
+from pubrules.repos import read
+from pubrules.variables import BLOCK, block_problems, name_problem
 
 PAGE = 30
 
@@ -105,13 +105,13 @@ def live(api: Api, slug: str) -> dict[str, str]:
 
 
 def declared(api: Api, slug: str) -> dict:
-    """`slug`'s variables block, from the pubkit.json on its default branch."""
+    """`slug`'s variables block, from the pubrules.json on its default branch."""
     config = remote_config(api, slug)
     if not isinstance(config, dict) or BLOCK not in config:
-        raise ValueError(f"its pubkit.json declares no variables; add "
+        raise ValueError(f"its pubrules.json declares no variables; add "
                          f'"{BLOCK}": {{"names": [...]}} to it')
     if bad := block_problems(config[BLOCK]):
-        raise ValueError(f"its pubkit.json's {BLOCK} block: {'; '.join(bad)}")
+        raise ValueError(f"its pubrules.json's {BLOCK} block: {'; '.join(bad)}")
     return config[BLOCK]
 
 
@@ -147,7 +147,7 @@ def one(api: Api, slug: str, values: dict, apply: bool, setter) -> tuple[list[st
     except ValueError as e:
         return [f"{slug}: {e}"], False, True
     if names := undeclared(block, values):
-        return [f"{slug}: its pubkit.json doesn't declare {', '.join(names)}, "
+        return [f"{slug}: its pubrules.json doesn't declare {', '.join(names)}, "
                 f"which the state gives it"], False, True
     try:
         have = live(api, slug)

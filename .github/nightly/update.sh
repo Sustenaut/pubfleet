@@ -7,7 +7,7 @@
 # SLACK_TOKEN and SLACK_USER (the Sustenaut bot's token, and whom it DMs).
 set -euo pipefail
 
-branch=pubkit-nightly
+branch=pubrules-nightly
 body=$(mktemp)
 summary=${GITHUB_STEP_SUMMARY:-/dev/null}
 
@@ -53,14 +53,14 @@ wait_ci() {
 }
 
 git checkout -q -B "$branch" origin/main
-# Never to an older pubkit than main already runs: the open pull request, if any,
-# is left for a night whose pubkit is new enough.
+# Never to an older pubrules than main already runs: the open pull request, if any,
+# is left for a night whose pubrules is new enough.
 if ! why=$("$(dirname "$0")/not-backwards.sh" .); then
   echo "$REPO: $why." >> "$summary"
   echo "::warning::$REPO: $why"
   exit 0
 fi
-made=$(pubkit nightly --pubrel "$PUBREL" --body "$body" | tail -n 1)
+made=$(pubrules nightly --pubrel "$PUBREL" --body "$body" | tail -n 1)
 pr=$(gh pr list --repo "$REPO" --head "$branch" --state open --json number --jq '.[0].number // empty')
 
 if [[ -z "$made" ]]; then
@@ -75,7 +75,7 @@ fi
 # The same change as the open pull request's: leave it, its CI and the DM
 # already sent alone.
 tree=$(git rev-parse 'HEAD^{tree}')
-printf '\n<!-- pubkit-nightly tree=%s -->\n' "$tree" >> "$body"
+printf '\n<!-- pubrules-nightly tree=%s -->\n' "$tree" >> "$body"
 if [[ -n "$pr" ]] && gh pr view "$pr" --repo "$REPO" --json body --jq .body | grep -q "tree=$tree"; then
   echo "$REPO: #$pr already carries tonight's update." >> "$summary"
   exit 0

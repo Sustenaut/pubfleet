@@ -7,7 +7,7 @@
     pubfleet freshness [--json] (DIR... | --repos FILE [DIR])
 
 Each reads GitHub through `gh`, with a token the command's help names, and
-judges by the pubkit installed beside it.
+judges by the pubrules installed beside it.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from pubkit.paths import confined
+from pubrules.paths import confined
 
 from . import __version__
 
@@ -50,7 +50,7 @@ def parser() -> argparse.ArgumentParser:
                       help="print the repos file for a role, board or govern")
     what.add_argument("--discover", action="store_true",
                       help="add the owner's repositories the file lacks (on the board, protect "
-                           "where their pubkit.json says how, not governed), and print how many")
+                           "where their pubrules.json says how, not governed), and print how many")
     p.add_argument("--body", type=Path, metavar="PATH",
                    help="with --discover: write a pull request's description there")
     p.add_argument("file", nargs="?", type=Path, default=Path("state.json"), metavar="FILE")
@@ -68,7 +68,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("repos", nargs="*", metavar="REPO",
                    help="NAME or OWNER/NAME; by default every repository the state gives variables")
     p = commands.add_parser("freshness",
-                            help="report which pinned pubkit and standard each repository meets")
+                            help="report which pinned pubrules and standard each repository meets")
     p.add_argument("--json", action="store_true", help="JSON rows instead of a Markdown table")
     p.add_argument("--repos", type=Path, metavar="FILE",
                    help="report the repositories this repos file governs, checked out in DIR")

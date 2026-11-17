@@ -18,6 +18,6 @@
     "name": "pubfleet",
     "check": "pubfleet --version"
   },
-  "install": "pip install https://github.com/Sustenaut/pubfleet/releases/download/{tag}/pubfleet-{version}-py3-none-any.whl, beside the pubkit it names",
+  "install": "pip install https://github.com/Sustenaut/pubfleet/releases/download/{tag}/pubfleet-{version}-py3-none-any.whl, beside the pubrules it names",
   "key": "pub:sha2-256:val43nsjvmitydrfklhuh7dvfk6j5zkq7xwmtha3sjzwm3jocrtq"
 }

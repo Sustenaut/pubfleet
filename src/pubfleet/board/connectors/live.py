@@ -1,5 +1,5 @@
 """The live connector: the services themselves, over HTTPS, at the
-health URL each declares in its pubkit.json."""
+health URL each declares in its pubrules.json."""
 
 from __future__ import annotations
 

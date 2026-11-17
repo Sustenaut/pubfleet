@@ -1,5 +1,5 @@
 """The github connector: the GitHub REST API, for what a repository is
-and holds (its visibility, pubkit.json, release.json, lock and workflow
+and holds (its visibility, pubrules.json, release.json, lock and workflow
 files, rulesets, releases, open issues) and its security alerts.
 
 It reads with one token, sent only to api.github.com. A refused or
@@ -64,8 +64,8 @@ class GitHub(Connector):
         except (binascii.Error, ValueError, UnicodeDecodeError) as e:
             return Fact(None, (call,), f"{path} could not be decoded ({e})")
 
-    def pubkit_json(self, repo: str) -> Fact:
-        return self._file("pubkit_json", repo, "pubkit.json")
+    def pubrules_json(self, repo: str) -> Fact:
+        return self._file("pubrules_json", repo, "pubrules.json")
 
     def release_json(self, repo: str) -> Fact:
         return self._file("release_json", repo, "release.json")

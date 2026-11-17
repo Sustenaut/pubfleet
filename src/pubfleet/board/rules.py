@@ -8,9 +8,9 @@ letter was reached and which call each step rests on.
 The facts, by name:
 
 - `visibility`: "public" or "private"; `kind`: "package" or "service"
-- `integration`: `{"pubkit": bool, "pubrel": bool}`
-- `pins` and `latest`: `{"pubkit": [versions] or "self", "pubrel": ...}`,
-  and the latest release of each, `{"pubkit": "0.14.2", "pubrel": ...}`
+- `integration`: `{"pubrules": bool, "pubrel": bool}`
+- `pins` and `latest`: `{"pubrules": [versions] or "self", "pubrel": ...}`,
+  and the latest release of each, `{"pubrules": "0.14.2", "pubrel": ...}`
 - `released`: the newest release (a package) or production deploy (a
   service), `{"at": ISO time, "tag": ...}`, or None
 - `issues`, `dependabot_alerts`, `code_scanning_alerts`,
@@ -20,7 +20,7 @@ The facts, by name:
 - `ci`: main's last CI run, `{"workflow", "conclusion", "at", "jobs":
   [{"name", "conclusion"}]}`, or None
 - `nightly`: `{"governed": bool, "last": run or None}`
-- `live`: what pubkit.json's live block declares, `{"health": URL,
+- `live`: what pubrules.json's live block declares, `{"health": URL,
   "test": workflow, "deploy": workflow}`; `health`: `{"answers": bool,
   "status": int}`; `live_test`: the test workflow's last run, or None
 - `protection`: `{"differences": [text], "limit": bool}`
@@ -190,7 +190,7 @@ Notch = Callable[[Facts, dict, datetime], list[dict]]
 def pins(f: Facts, _: dict, __: datetime) -> list[dict]:
     pinned, latest = f.value("pins") or {}, f.value("latest") or {}
     behind = []
-    for tool in ("pubkit", "pubrel"):
+    for tool in ("pubrules", "pubrel"):
         versions = pinned.get(tool)
         if versions == "self" or not versions:
             continue
@@ -204,7 +204,7 @@ def pins(f: Facts, _: dict, __: datetime) -> list[dict]:
 
 def integration(f: Facts, _: dict, __: datetime) -> list[dict]:
     have = f.value("integration") or {}
-    missing = ["pubkit"] if not have.get("pubkit") else []
+    missing = ["pubrules"] if not have.get("pubrules") else []
     if f.value("kind") != "service" and not have.get("pubrel"):
         missing.append("pubrel")
     if not missing:
@@ -215,7 +215,7 @@ def integration(f: Facts, _: dict, __: datetime) -> list[dict]:
 def observability(f: Facts, _: dict, __: datetime) -> list[dict]:
     declared = f.value("live") or {}
     if not declared.get("health"):
-        return [step("No health URL in pubkit.json's live block", -1, f, "live")]
+        return [step("No health URL in pubrules.json's live block", -1, f, "live")]
     health = f.value("health") or {}
     if health.get("answers"):
         return []
@@ -227,7 +227,7 @@ def observability(f: Facts, _: dict, __: datetime) -> list[dict]:
 def live_testing(f: Facts, entry: dict, now: datetime) -> list[dict]:
     declared = f.value("live") or {}
     if not declared.get("test"):
-        return [step("No live-test workflow in pubkit.json's live block", -1, f, "live")]
+        return [step("No live-test workflow in pubrules.json's live block", -1, f, "live")]
     last = f.value("live_test")
     hours = entry.get("hours", 24)
     if not last:
@@ -284,7 +284,7 @@ def protection(f: Facts, _: dict, __: datetime) -> list[dict]:
     if found.get("limit"):
         return [step(f"No ruleset: {differences[0]} (a GitHub plan limit)", -1, f, "protection")]
     more = f" (and {len(differences) - 1} more)" if len(differences) > 1 else ""
-    return [step(f"Protection differs from pubkit's: {differences[0]}{more}", -1, f, "protection")]
+    return [step(f"Protection differs from pubrules': {differences[0]}{more}", -1, f, "protection")]
 
 
 def ci(f: Facts, _: dict, __: datetime) -> list[dict]:

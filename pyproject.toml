@@ -11,11 +11,11 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "David Schryer", email = "schryer@gmail.com" }]
-# pubkit, as a library: the standard the board grades against and the GitHub
-# calls pubkit makes (README, "What pubfleet takes from pubkit"). The floor is
-# the oldest pubkit pubfleet works with; tests/requirements.lock pins the one
+# pubrules, as a library: the standard the board grades against and the GitHub
+# calls pubrules makes (README, "What pubfleet takes from pubrules"). The floor is
+# the oldest pubrules pubfleet works with; tests/requirements.lock pins the one
 # it is tested with, and nightly.yml installs that one.
-dependencies = ["pubkit>=0.33.0"]
+dependencies = ["pubrules>=0.43.0"]
 
 [project.urls]
 Repository = "https://github.com/Sustenaut/pubfleet"

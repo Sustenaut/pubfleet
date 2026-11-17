@@ -4,7 +4,7 @@
 # and writes nowhere: the caller's workflow publishes the page.
 #
 # The caller checks nothing out first: this workflow checks out the
-# caller's repository, where its lock is, installs the pubfleet and pubkit its
+# caller's repository, where its lock is, installs the pubfleet and pubrules its
 # tests/requirements.lock pins (by hash, wheels only), and reads every repository
 # named by `repos` with `token`, a fine-grained token that can only read
 # (Metadata, Contents, Actions, Issues, Pull requests, Dependabot alerts,
@@ -19,7 +19,7 @@ on:
       lock:
         type: string
         default: tests/requirements.lock
-        description: The hash-locked requirements, pubfleet's and pubkit's wheels among them, in the caller's repository
+        description: The hash-locked requirements, pubfleet's and pubrules' wheels among them, in the caller's repository
       repos:
         type: string
         required: true
@@ -51,8 +51,8 @@ jobs:
         env: { LOCK: '${{ inputs.lock }}' }
       - shell: bash  # pipefail: a failed board fails the step, though tee succeeds
         run: |
-          printf '%s' "$REPOS" > .pubkit-repos.json
-          args=(--out site --repos .pubkit-repos.json)
+          printf '%s' "$REPOS" > .pubrules-repos.json
+          args=(--out site --repos .pubrules-repos.json)
           if [ -n "$RULES" ]; then args+=(--rules "$RULES"); fi
           pubfleet board "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
         env:

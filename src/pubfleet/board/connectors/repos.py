@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pubkit.repos import entries
+from pubrules.repos import entries
 
 from .base import Connector, Fact
 

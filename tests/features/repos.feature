@@ -1,5 +1,5 @@
 Feature: A state file says which repositories an owner has, and a repos file which pubfleet acts on
-  How a repository is protected stays in its own pubkit.json. `pubfleet state
+  How a repository is protected stays in its own pubrules.json. `pubfleet state
   --check` is a state repository's fast check.
 
   Scenario: The board grades what the repos file names, by each one's roles
@@ -20,7 +20,7 @@ Feature: A state file says which repositories an owner has, and a repos file whi
 
   Scenario: pubfleet freshness reports what the file governs, checked out or not
     Given the file "repos.json" reads "{"repositories": [{"repo": "o/here", "govern": true}, {"repo": "o/gone", "govern": true}, {"repo": "o/other"}]}"
-    And the file "here/tests/requirements.lock" reads "pubkit @ https://x/download/v0.1.0/pubkit-0.1.0-py3-none-any.whl"
+    And the file "here/tests/requirements.lock" reads "pubrules @ https://x/download/v0.1.0/pubrules-0.1.0-py3-none-any.whl"
     When I run pubfleet "freshness" "--repos" "repos.json" "."
     Then it succeeds
     And it prints "| here | 0.1.0 |"
@@ -69,27 +69,27 @@ Feature: A state file says which repositories an owner has, and a repos file whi
   Scenario: A repository to protect needs a protect block
     Given the state of "example-org" has "one" with protect on and "two" with protect off
     And "example-org/one" exists
-    And "example-org/one" has the pubkit.json "{"kind": "utility"}"
+    And "example-org/one" has the pubrules.json "{"kind": "utility"}"
     And "example-org/two" exists
     When I run pubfleet "state" "--check"
     Then it does not succeed
-    And it prints "example-org/one has "protect" on, but its pubkit.json has no protect block"
+    And it prints "example-org/one has "protect" on, but its pubrules.json has no protect block"
 
   Scenario: A repository with deploy on needs a deploy block
     Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}, "two": {"board": true, "protect": false, "govern": false, "deploy": true}}}"
-    And "example-org/one" has the pubkit.json "{"kind": "service", "deploy": {"namespace": "one"}}"
-    And "example-org/two" has the pubkit.json "{"kind": "service"}"
+    And "example-org/one" has the pubrules.json "{"kind": "service", "deploy": {"namespace": "one"}}"
+    And "example-org/two" has the pubrules.json "{"kind": "service"}"
     When I run pubfleet "state" "--check"
     Then it does not succeed
-    And it prints "example-org/two has "deploy" on, but its pubkit.json has no deploy block"
+    And it prints "example-org/two has "deploy" on, but its pubrules.json has no deploy block"
     And it does not print "example-org/one has"
 
-  Scenario: A repository with deploy on and no pubkit.json says so
+  Scenario: A repository with deploy on and no pubrules.json says so
     Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}}}"
     And "example-org/one" exists
     When I run pubfleet "state" "--check"
     Then it does not succeed
-    And it prints "example-org/one has "deploy" on, but no pubkit.json on its default branch"
+    And it prints "example-org/one has "deploy" on, but no pubrules.json on its default branch"
 
   Scenario: The repos file for deploy lists the repositories the convergence engine walks
     Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}, "two": {"board": true, "protect": false, "govern": false}}}"
@@ -193,12 +193,12 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     When I run pubfleet "state" "--check"
     Then it succeeds
 
-  Scenario: --discover adds the owner's repositories the state file lacks, by what each one's pubkit.json says
+  Scenario: --discover adds the owner's repositories the state file lacks, by what each one's pubrules.json says
     Given the state of "example-org" has "one" with protect off and "two" with protect off
     And "example-org/one" exists
     And "example-org/two" exists
     And "example-org/three" has a protect block requiring "ci / passed"
-    And "example-org/four" has the pubkit.json "{"kind": "utility"}"
+    And "example-org/four" has the pubrules.json "{"kind": "utility"}"
     And "example-org/five" exists
     And "example-org/old" is archived
     And "example-org/copy" is a fork
@@ -209,8 +209,8 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And the state file lists "three" as on the board with protect on, not governed
     And the state file lists "four" as on the board with protect off, not governed
     And the state file lists "five" as on the board with protect off, not governed
-    And "body.md" says "| three | public | on: its pubkit.json has a protect block |"
-    And "body.md" says "| five | public | off: no protect block in its pubkit.json |"
+    And "body.md" says "| three | public | on: its pubrules.json has a protect block |"
+    And "body.md" says "| five | public | off: no protect block in its pubrules.json |"
     When I run pubfleet "state" "--check"
     Then it succeeds
 

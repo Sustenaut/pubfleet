@@ -1,7 +1,7 @@
 """Facts about each repository, from the connectors' readings.
 
 This is where readings become the facts rules.py grades: a lock's pin
-becomes a version, rulesets become their differences from pubkit's. Every
+becomes a version, rulesets become their differences from pubrules'. Every
 read goes through a connector, and every fact keeps the ids of the calls
 it rests on.
 """
@@ -14,11 +14,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pubkit.protect import (differences as ruleset_differences, entry, on_default_branch, on_release_tags,
+from pubrules.protect import (differences as ruleset_differences, entry, on_default_branch, on_release_tags,
                             ruleset, tag_ruleset)
-from pubkit.freshness import PIN
-from pubkit.nightly import PUBREL_VERSION
-from pubkit.refs import ANY_OWNER, AT, RELEASE_PIN, VERSION
+from pubrules.freshness import PIN
+from pubrules.nightly import PUBREL_VERSION
+from pubrules.refs import ANY_OWNER, AT, RELEASE_PIN, VERSION
 
 from .connectors.actions import Actions
 from .connectors.base import Fact
@@ -28,9 +28,9 @@ from .connectors.repos import Repos
 from .connectors.scorecard import Scorecard
 from .connectors.sonarcloud import SonarCloud
 
-# Any pubkit reusable workflow, the generated job-*.yml included, by
+# Any pubrules reusable workflow, the generated job-*.yml included, by
 # commit or by tag, under any owner.
-PUBKIT_PIN = re.compile(ANY_OWNER + r"pubkit/\.github/workflows/[\w.-]+\.ya?ml@" + AT + VERSION)
+PUBRULES_PIN = re.compile(ANY_OWNER + r"pubrules/\.github/workflows/[\w.-]+\.ya?ml@" + AT + VERSION)
 LIVE_KEYS = {"health", "test", "deploy"}
 WORKFLOW_NAME = re.compile(r"[\w.-]+\.ya?ml")
 
@@ -63,7 +63,7 @@ def inventory(c: Connectors, repos: Path) -> tuple[list[dict], list[str]]:
 
 
 class Gatherer:
-    """Reads each repository's facts. The latest pubkit and pubrel are
+    """Reads each repository's facts. The latest pubrules and pubrel are
     read once for the whole board."""
 
     def __init__(self, c: Connectors, rules: dict):
@@ -88,13 +88,13 @@ class Gatherer:
         facts["visibility"] = Fact((about.value or {}).get("visibility"), about.sources, about.note)
         branch = (about.value or {}).get("default_branch", "main")
 
-        raw = gh.pubkit_json(repo)
+        raw = gh.pubrules_json(repo)
         config, config_note = None, raw.note
         if raw.value is not None:
             try:
                 config = json.loads(raw.value)
             except ValueError as e:
-                config_note = f"pubkit.json is not JSON ({e})"
+                config_note = f"pubrules.json is not JSON ({e})"
         if not isinstance(config, dict):
             config = None
         kind = "service" if config and config.get("kind") == "service" else "package"
@@ -133,22 +133,22 @@ class Gatherer:
         return facts
 
     def pins(self, repo, config, raw, release_json, lock, names, texts) -> tuple[Fact, Fact]:
-        """The pubkit and pubrel versions the repository pins, and whether
+        """The pubrules and pubrel versions the repository pins, and whether
         it is integrated with each."""
         workflows = "\n".join(t.value for t in texts if t.value)
-        pubkit = sorted(set(PIN.findall(lock.value or ""))
-                        | {m["version"] for m in PUBKIT_PIN.finditer(workflows)})
+        pubrules = sorted(set(PIN.findall(lock.value or ""))
+                        | {m["version"] for m in PUBRULES_PIN.finditer(workflows)})
         pubrel = {m["version"] for m in RELEASE_PIN.finditer(workflows)}
         pubrel |= {m["version"] for m in PUBREL_VERSION.finditer(workflows)}
         declared = ((config or {}).get("ci") or {}).get("release") if config else None
         if isinstance(declared, dict) and isinstance(declared.get("pubrel"), str):
             pubrel.add(declared["pubrel"].removeprefix("v"))
-        pinned: dict[str, Any] = {"pubkit": pubkit, "pubrel": sorted(pubrel)}
+        pinned: dict[str, Any] = {"pubrules": pubrules, "pubrel": sorted(pubrel)}
         for tool, home in self.tools.items():
             if home == repo:
                 pinned[tool] = "self"
         integrated = {
-            "pubkit": bool(pinned["pubkit"]) and (config is not None or pinned["pubkit"] == "self"),
+            "pubrules": bool(pinned["pubrules"]) and (config is not None or pinned["pubrules"] == "self"),
             "pubrel": bool(pinned["pubrel"]) and (release_json.value is not None
                                                   or pinned["pubrel"] == "self"),
         }
@@ -158,12 +158,12 @@ class Gatherer:
 
     @staticmethod
     def live_block(config: dict | None) -> tuple[dict, str | None]:
-        """pubkit.json's live block, checked; empty, with why, when unsound."""
+        """pubrules.json's live block, checked; empty, with why, when unsound."""
         block = (config or {}).get("live")
         if block is None:
             return {}, None
         if not isinstance(block, dict):
-            return {}, "pubkit.json's live block is not an object"
+            return {}, "pubrules.json's live block is not an object"
         problems = [f"{k} is not a live setting" for k in sorted(block.keys() - LIVE_KEYS)]
         health = block.get("health")
         if health is not None and not (isinstance(health, str) and health.startswith("https://")):
@@ -173,7 +173,7 @@ class Gatherer:
                                      and WORKFLOW_NAME.fullmatch(block[key])):
                 problems.append(f"{key} must be a workflow file name, such as live.yml")
         if problems:
-            return {}, f"pubkit.json's live block: {'; '.join(problems)}"
+            return {}, f"pubrules.json's live block: {'; '.join(problems)}"
         return dict(block), None
 
     def released(self, repo, kind, live, workflows, names) -> Fact:
@@ -222,12 +222,12 @@ class Gatherer:
                     (*item["sources"], *runs.sources), runs.note)
 
     def protection(self, repo, item, config, raw, visibility) -> Fact:
-        """How the repository's rulesets differ from what pubkit wants of it:
+        """How the repository's rulesets differ from what pubrules wants of it:
         not at all, where its repos file entry doesn't ask for any."""
         if not item.get("protect", True):
             return Fact({"differences": [], "limit": False}, item["sources"])
         try:
-            wanted = entry(repo, config, "its pubkit.json")
+            wanted = entry(repo, config, "its pubrules.json")
         except ValueError as e:
             return Fact({"differences": [str(e)], "limit": False}, raw.sources)
         found = self.c.github.rulesets(repo)

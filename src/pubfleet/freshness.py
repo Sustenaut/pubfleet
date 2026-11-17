@@ -1,14 +1,14 @@
-"""`pubfleet freshness`: keep every pub* repository on the latest pubkit, so
+"""`pubfleet freshness`: keep every pub* repository on the latest pubrules, so
 none sits on an old standard unnoticed.
 
 `pubfleet freshness DIR...` reports, for each checked-out repository, the
-pubkit its lock pins, whether it is the installed one, whether it conforms to
-that pubkit's standard, and its open exceptions: one Markdown table, also
+pubrules its lock pins, whether it is the installed one, whether it conforms to
+that pubrules' standard, and its open exceptions: one Markdown table, also
 appended to the GitHub step summary when there is one. It reads; it changes
 nothing. `pubfleet freshness --repos FILE [DIR]` reports instead the
 repositories a repos file marks to govern, each checked out at DIR/<name>.
-The installed pubkit is the latest, in the nightly that runs this; moving a
-repository to it is `pubkit bump`'s, and the nightly's.
+The installed pubrules is the latest, in the nightly that runs this; moving a
+repository to it is `pubrules bump`'s, and the nightly's.
 """
 
 from __future__ import annotations
@@ -18,17 +18,17 @@ import os
 import sys
 from pathlib import Path
 
-from pubkit import __version__
-from pubkit.conform import run as conform
-from pubkit.freshness import pinned
-from pubkit.repos import read
+from pubrules import __version__
+from pubrules.conform import run as conform
+from pubrules.freshness import pinned
+from pubrules.repos import read
 
 
 def row(repo: Path) -> dict:
-    config_path = repo / "pubkit.json"
+    config_path = repo / "pubrules.json"
     out = {"repo": repo.name, "pinned": pinned(repo) or "-", "latest": __version__}
     if not config_path.is_file():
-        return {**out, "conforms": "no pubkit.json", "exceptions": []}
+        return {**out, "conforms": "no pubrules.json", "exceptions": []}
     config = json.loads(config_path.read_text(encoding="utf-8"))
     if config.get("kind") != "rust":
         return {**out, "conforms": "not Rust", "exceptions": []}
@@ -38,7 +38,7 @@ def row(repo: Path) -> dict:
         return {**out, "conforms": f"could not check: {e}", "exceptions": []}
     exceptions = [line.removeprefix("open exception: ") for line in lines
                   if line.startswith("open exception: ")]
-    # The workflow pin is checked against the pinned pubkit by `sync --check`
+    # The workflow pin is checked against the pinned pubrules by `sync --check`
     # in the repository itself; here every rule is judged by the latest.
     problems = [p for p in problems if not p.startswith(".github/workflows/")]
     verdict = "yes" if not problems else f"no: {len(problems)} problem(s): " + "; ".join(problems)
@@ -46,8 +46,8 @@ def row(repo: Path) -> dict:
 
 
 def table(rows: list[dict]) -> str:
-    lines = [f"Every pub* repository against pubkit {__version__}.", "",
-             "| Repository | Pins pubkit | Current | Conforms to the latest standard | Open exceptions |",
+    lines = [f"Every pub* repository against pubrules {__version__}.", "",
+             "| Repository | Pins pubrules | Current | Conforms to the latest standard | Open exceptions |",
              "|---|---|---|---|---|"]
     for r in rows:
         current = "yes" if r["pinned"] == r["latest"] else "**no**"

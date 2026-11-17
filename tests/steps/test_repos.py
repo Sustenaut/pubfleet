@@ -53,7 +53,7 @@ if o:
              if slug.split("/", 1)[0] == o.group(1) and "full_name" not in meta]
     print(json.dumps(found if o.group(2) == "1" else []))
     sys.exit(0)
-f = re.match(r"repos/([^/]+/[^/]+)/contents/pubkit.json$", url)
+f = re.match(r"repos/([^/]+/[^/]+)/contents/pubrules.json$", url)
 if f:
     if f.group(1) not in state["files"]:
         missing()
@@ -107,7 +107,7 @@ def has_block(github, slug, check):
     has_config(github, slug, text)
 
 
-@given(parsers.parse('"{slug}" has the pubkit.json "{text}"'))
+@given(parsers.parse('"{slug}" has the pubrules.json "{text}"'))
 def has_config(github, slug, text):
     def change(state):
         _exists(state, slug)
@@ -239,7 +239,7 @@ def shows_project(repo, path, slug, project):
 def board_input(workflow, name):
     assert name in workflow["data"][True]["workflow_call"]["inputs"]
     run = next(s for s in workflow["data"]["jobs"]["board"]["steps"] if "pubfleet board" in s.get("run", ""))
-    assert "--repos .pubkit-repos.json" in run["run"]
+    assert "--repos .pubrules-repos.json" in run["run"]
     assert run["env"]["REPOS"] == "${{ inputs.repos }}"
 
 

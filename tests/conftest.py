@@ -1,5 +1,5 @@
 """pubfleet's suite. The steps it does not define here (`it succeeds`, `it
-prints ...`) are pubkit's plugin's.
+prints ...`) are pubrules' plugin's.
 
 Steps and fixtures more than one steps module uses live here: the scratch
 repository, running the `pubfleet` command in it, and its files. pytest-bdd
@@ -19,10 +19,10 @@ from pytest_bdd import given, parsers, when
 @pytest.fixture(autouse=True)
 def offline_pubrel(tmp_path, monkeypatch):
     """No scenario reads pubrel's tags from GitHub: its repository is one
-    that is not there (pubkit's refs.py, which the freshness rows read
+    that is not there (pubrules' refs.py, which the freshness rows read
     through)."""
-    monkeypatch.setenv("PUBKIT_PUBREL_REMOTE", str(tmp_path / "no-pubrel"))
-    monkeypatch.delenv("PUBKIT_RELEASE_COMMIT", raising=False)
+    monkeypatch.setenv("PUBRULES_PUBREL_REMOTE", str(tmp_path / "no-pubrel"))
+    monkeypatch.delenv("PUBRULES_RELEASE_COMMIT", raising=False)
 
 
 @pytest.fixture
