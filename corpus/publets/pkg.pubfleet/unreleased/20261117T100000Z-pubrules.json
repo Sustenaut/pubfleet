@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "pubkit is now pubrules: pubfleet depends on pubrules 0.43.0 or later instead of pubkit, reads each repository's pubrules.json instead of pubkit.json, and grades pins to Sustenaut/pubrules workflows"
+}
