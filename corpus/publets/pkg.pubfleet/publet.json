@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubfleet 0.2.0 is released as v0.2.0 from commit 1c81fb3f1aab8b9e086952a2c6a2daa653aff5c2.",
+      "content": "pubfleet 0.2.1 is released as v0.2.1 from commit 6c7a4460ba05cafdfffadd291f13c811c2dfae7c.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubfleet",
-            "0.2.0",
+            "0.2.1",
             "pubfleet --version",
-            "pubfleet 0.2.0",
-            "v0.2.0",
-            "1c81fb3f1aab8b9e086952a2c6a2daa653aff5c2"
+            "pubfleet 0.2.1",
+            "v0.2.1",
+            "6c7a4460ba05cafdfffadd291f13c811c2dfae7c"
           ]
         ]
       },
-      "scope": "the published release v0.2.0 of pubfleet",
+      "scope": "the published release v0.2.1 of pubfleet",
       "sources": [
         {
           "ref": "pubfleet",
-          "revision": "1c81fb3f1aab8b9e086952a2c6a2daa653aff5c2"
+          "revision": "6c7a4460ba05cafdfffadd291f13c811c2dfae7c"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubfleet 0.2.0 was released on 2026-11-17 from commit 1c81fb3f1aab8b9e086952a2c6a2daa653aff5c2 with these changes.",
+      "content": "pubfleet 0.2.1 was released on 2026-11-17 from commit 6c7a4460ba05cafdfffadd291f13c811c2dfae7c with these changes.",
       "data": {
         "columns": [
           {
@@ -57,19 +57,19 @@
         ],
         "rows": [
           [
-            "changed",
-            "pubkit is now pubrules: pubfleet depends on pubrules 0.43.0 or later instead of pubkit, reads each repository's pubrules.json instead of pubkit.json, and grades pins to Sustenaut/pubrules workflows"
+            "fixed",
+            "pubfleet state --check reads the repository it runs in (GITHUB_REPOSITORY) from the pubrules.json beside the state file, not from its default branch, so a state repository's pull request that adds or moves its own protect block can pass its own check"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.0 of pubfleet",
+      "scope": "the published release v0.2.1 of pubfleet",
       "sources": [
         {
           "ref": "pubfleet",
-          "revision": "1c81fb3f1aab8b9e086952a2c6a2daa653aff5c2"
+          "revision": "6c7a4460ba05cafdfffadd291f13c811c2dfae7c"
         }
       ]
     }
