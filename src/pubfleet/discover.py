@@ -3,7 +3,7 @@ a state file does not list yet.
 
 It lists the owner's repositories, leaving out archived ones and forks, and gives
 each one the file lacks an entry: on the board, protected when its own
-pubkit.json has a protect block (`state --check` refuses protect without one), and
+pubrules.json has a protect block (`state --check` refuses protect without one), and
 not governed, so its nightly waits until someone turns it on. No project and no
 deploy. It rewrites the file as state files are kept (two-space JSON, repositories
 in name order), writes a pull request's description to --body when given (what it
@@ -20,7 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-from pubkit.protect import Api, ApiError, gh, remote_config
+from pubrules.protect import Api, ApiError, gh, remote_config
 
 from .state import shape
 
@@ -42,7 +42,7 @@ def listing(owner: str, api: Api = gh) -> list[dict]:
 
 def entry(owner: str, name: str, api: Api = gh) -> dict:
     """A new repository's entry: on the board, protected only where its own
-    pubkit.json says how, not governed."""
+    pubrules.json says how, not governed."""
     try:
         config = remote_config(api, f"{owner}/{name}")
     except ValueError:
@@ -69,14 +69,14 @@ def body(state: dict, added: list[str], gone: list[str], listed: list[dict]) -> 
     visibility = {r["name"]: r.get("visibility", "unknown") for r in listed}
     lines = ["Repositories `state.json` did not list yet, found by `pubfleet state --discover`. "
              "Each is on the board and not governed; protect is on where its own "
-             "`pubkit.json` has a protect block.", "",
+             "`pubrules.json` has a protect block.", "",
              "| Repository | Visibility | protect |", "|---|---|---|"]
     for name in added:
-        why = ("on: its pubkit.json has a protect block" if state["repos"][name]["protect"]
-               else "off: no protect block in its pubkit.json")
+        why = ("on: its pubrules.json has a protect block" if state["repos"][name]["protect"]
+               else "off: no protect block in its pubrules.json")
         lines.append(f"| {name} | {visibility.get(name, 'unknown')} | {why} |")
     lines += ["", "Merging puts them on the board and, where protect is on, brings their "
-              "rulesets in line with pubkit's (`state / apply`). Set `govern`, `project` or "
+              "rulesets in line with pubrules' (`state / apply`). Set `govern`, `project` or "
               "`deploy` here first if one should have them."]
     if gone:
         lines += ["", "Listed, but archived or no longer there (never removed by this): "

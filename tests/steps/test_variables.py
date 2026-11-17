@@ -47,7 +47,7 @@ if d and method == "POST":
     state["ran"].append([d.group(1), d.group(2), json.loads(read)["ref"]])
     save()
     sys.exit(0)
-f = re.match(r"repos/([^/]+/[^/]+)/contents/pubkit.json$", url)
+f = re.match(r"repos/([^/]+/[^/]+)/contents/pubrules.json$", url)
 if f:
     if f.group(1) not in state["files"]:
         missing()
@@ -105,7 +105,7 @@ def declares_only(github, slug, a, b):
     _config(github, slug, {"kind": "service", "variables": {"names": [a, b]}})
 
 
-@given(parsers.re(r'"(?P<slug>[^"]+)" has the pubkit.json "(?P<text>.+)"$'))
+@given(parsers.re(r'"(?P<slug>[^"]+)" has the pubrules.json "(?P<text>.+)"$'))
 def has_config(github, slug, text):
     _config(github, slug, json.loads(text))
 
@@ -127,9 +127,9 @@ def refuses(github, slug):
     _edit(github, lambda state: state["refuse"].append(slug))
 
 
-@given(parsers.re(r"its pubkit.json's variables block is \"(?P<text>.+)\"$"))
+@given(parsers.re(r"its pubrules.json's variables block is \"(?P<text>.+)\"$"))
 def variables_block(repo, text):
-    path = repo / "pubkit.json"
+    path = repo / "pubrules.json"
     config = json.loads(path.read_text())
     path.write_text(json.dumps({**config, "variables": json.loads(text)}))
 

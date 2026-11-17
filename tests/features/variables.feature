@@ -1,5 +1,5 @@
 Feature: pubfleet variables keeps repositories' GitHub variables to a state file
-  A repository's pubkit.json declares the names of the variables it reads; the owner's
+  A repository's pubrules.json declares the names of the variables it reads; the owner's
   state file gives their values, strings or JSON. --check prints how GitHub differs and
   fails; --apply sets what differs and runs the repository's deploy workflow once.
 
@@ -55,12 +55,12 @@ Feature: pubfleet variables keeps repositories' GitHub variables to a state file
     Then it succeeds
     And GitHub holds "SOME_URL" in "example-org/one" as "https://example.com" now
 
-  Scenario: A variable its pubkit.json doesn't declare is never set
+  Scenario: A variable its pubrules.json doesn't declare is never set
     Given "example-org/one" declares "SOME_URL" and "SOME_MAP", deploying with "deploy.yml"
     And the state gives "one" the variables "{"OTHER": "x"}"
     When I run pubfleet "variables" "--apply"
     Then the exit code is 1
-    And it prints "example-org/one: its pubkit.json doesn't declare OTHER"
+    And it prints "example-org/one: its pubrules.json doesn't declare OTHER"
     And nothing was set or run
 
   Scenario: A repository the state gives no variables is left alone, unless named
@@ -104,14 +104,14 @@ Feature: pubfleet variables keeps repositories' GitHub variables to a state file
     And the state gives "one" the variables "{"SOME_URL": "https://example.com", "OTHER": "x"}"
     When I run pubfleet "state" "--check"
     Then it does not succeed
-    And it prints "example-org/one: its pubkit.json doesn't declare OTHER, which the state gives it"
+    And it prints "example-org/one: its pubrules.json doesn't declare OTHER, which the state gives it"
 
   Scenario: The state check refuses variables for a repository that declares none
-    Given "example-org/one" has the pubkit.json "{"kind": "utility"}"
+    Given "example-org/one" has the pubrules.json "{"kind": "utility"}"
     And the state gives "one" the variables "{"SOME_URL": "https://example.com"}"
     When I run pubfleet "state" "--check"
     Then it does not succeed
-    And it prints "example-org/one has variables in the state, but its pubkit.json declares no variables"
+    And it prints "example-org/one has variables in the state, but its pubrules.json declares no variables"
 
   Scenario Outline: Variables of the wrong shape are refused, without asking GitHub
     Given the state gives "one" the variables "<variables>"

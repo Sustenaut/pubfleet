@@ -80,14 +80,14 @@ Feature: The board grades every listed repository A to E
     Then Security is "A"
     And Security lists the note "Secret scanning settings not read: this token can't see it"
 
-  Scenario: A package behind on pubkit, ungoverned and with open issues grades D
+  Scenario: A package behind on pubrules, ungoverned and with open issues grades D
     Given the facts of a package with nothing wrong
-    And it pins pubkit "0.12.0" where the latest is "0.14.2"
+    And it pins pubrules "0.12.0" where the latest is "0.14.2"
     And it is not governed and has no nightly workflow
     And it has 3 open issues
     When I grade them
     Then Delivery is "D"
-    And Delivery lists, in order, "pubkit 0.12.0, latest 0.14.2", "3 open issues", "Not governed, and no nightly run in 2 days"
+    And Delivery lists, in order, "pubrules 0.12.0, latest 0.14.2", "3 open issues", "Not governed, and no nightly run in 2 days"
 
   Scenario: A package not integrated with pubrel, unreleased for two months
     Given the facts of a package with nothing wrong
@@ -109,7 +109,7 @@ Feature: The board grades every listed repository A to E
     And its live test last passed at "2026-10-25T09:00:00Z"
     When I grade them
     Then Delivery is "C"
-    And Delivery lists the notch "No health URL in pubkit.json's live block"
+    And Delivery lists the notch "No health URL in pubrules.json's live block"
     And Delivery lists the notch "live.yml last passed 2026-10-25 09:00, over 24 h ago"
 
   Scenario: A service whose health URL does not answer takes the observability notch
@@ -119,7 +119,7 @@ Feature: The board grades every listed repository A to E
     Then Delivery is "B"
     And Delivery lists the notch "https://example.eu/health answered 503"
 
-  Scenario: Protection that differs from pubkit's takes a notch, and a private repository's plan limit says so
+  Scenario: Protection that differs from pubrules' takes a notch, and a private repository's plan limit says so
     Given the facts of a service with nothing wrong
     And it is private and GitHub's plan gives it no rulesets
     When I grade them
@@ -128,7 +128,7 @@ Feature: The board grades every listed repository A to E
 
   Scenario: A grade never goes below E, but lists every notch
     Given the facts of a package with nothing wrong
-    And it pins pubkit "0.12.0" where the latest is "0.14.2"
+    And it pins pubrules "0.12.0" where the latest is "0.14.2"
     And it is not governed and has no nightly workflow
     And it has 3 open issues
     And it has no release.json, so is not integrated with pubrel
@@ -167,7 +167,7 @@ Feature: The board grades every listed repository A to E
     Given recorded responses from the build recording
     When the github connector reads "example-org/pubthing"
     Then its visibility is "public"
-    And its pubkit.json has the kind "rust"
+    And its pubrules.json has the kind "rust"
     And it has 1 open issue, the pull request it lists not counted
     And its Dependabot alerts could not be read: "Dependabot alerts are disabled for this repository. (HTTP 403)"
     And its latest release is "v1.4.0"
@@ -216,14 +216,14 @@ Feature: The board grades every listed repository A to E
     When I read the board's modules outside its connectors
     Then none imports urllib, http, socket, ssl or subprocess
 
-  Scenario Outline: The board reads a pubkit pin by commit, or the older pin by tag, under any owner
+  Scenario Outline: The board reads a pubrules pin by commit, or the older pin by tag, under any owner
     When the board reads the pin "<line>"
     Then it reads owner "<owner>", version "<version>" and commit "<commit>"
 
     Examples:
       | line                                                                                                            | owner       | version | commit                                   |
-      | uses: example-org/pubkit/.github/workflows/rust-ci.yml@0f3574a72707a46bae149d3ed7a4644b4837795a # v0.15.2       | example-org | 0.15.2  | 0f3574a72707a46bae149d3ed7a4644b4837795a |
-      | uses: example-org/pubkit/.github/workflows/rust-ci.yml@v0.15.1                                                  | example-org | 0.15.1  | none                                     |
-      | uses: example-org/pubkit/.github/workflows/job-rust-test.yml@0f3574a72707a46bae149d3ed7a4644b4837795a # v0.15.2 | example-org | 0.15.2  | 0f3574a72707a46bae149d3ed7a4644b4837795a |
-      | uses: sustenaut/pubkit/.github/workflows/rust-ci.yml@0f3574a72707a46bae149d3ed7a4644b4837795a # v0.16.0         | sustenaut   | 0.16.0  | 0f3574a72707a46bae149d3ed7a4644b4837795a |
-      | uses: Sustenaut/pubkit/.github/workflows/job-rust-test.yml@v0.16.0                                              | Sustenaut   | 0.16.0  | none                                     |
+      | uses: example-org/pubrules/.github/workflows/rust-ci.yml@0f3574a72707a46bae149d3ed7a4644b4837795a # v0.15.2       | example-org | 0.15.2  | 0f3574a72707a46bae149d3ed7a4644b4837795a |
+      | uses: example-org/pubrules/.github/workflows/rust-ci.yml@v0.15.1                                                  | example-org | 0.15.1  | none                                     |
+      | uses: example-org/pubrules/.github/workflows/job-rust-test.yml@0f3574a72707a46bae149d3ed7a4644b4837795a # v0.15.2 | example-org | 0.15.2  | 0f3574a72707a46bae149d3ed7a4644b4837795a |
+      | uses: sustenaut/pubrules/.github/workflows/rust-ci.yml@0f3574a72707a46bae149d3ed7a4644b4837795a # v0.16.0         | sustenaut   | 0.16.0  | 0f3574a72707a46bae149d3ed7a4644b4837795a |
+      | uses: Sustenaut/pubrules/.github/workflows/job-rust-test.yml@v0.16.0                                              | Sustenaut   | 0.16.0  | none                                     |

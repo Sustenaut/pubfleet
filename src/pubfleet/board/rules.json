@@ -1,6 +1,6 @@
 {
-  "comment": "The rules `pubfleet board` grades repositories by (rules.py says how each is applied). Each row gets three grades, A to E. Quality starts at SonarQube Cloud's worse rating of reliability and maintainability, Security at its security rating; with no analysis, each starts at A and takes the sonar notch. Then each tool below with findings takes one letter off its category's grade: a CI job on main's last run that failed, or open alerts, or a Scorecard score under `below`. Delivery starts at A and takes one letter for each notch in `delivery` that applies (to all, packages or services) and finds a gap. A grade never goes below E, but every notch is listed. The overall grade is the worst of the three. Drop an entry to drop its notch; `pubfleet board --rules FILE` reads another file. `workflows` and `repositories` tell the board where to look: which workflow files are CI, nightly and deploy, and which repositories release pubkit and pubrel.",
-  "name": "pubkit 2026-10",
+  "comment": "The rules `pubfleet board` grades repositories by (rules.py says how each is applied). Each row gets three grades, A to E. Quality starts at SonarQube Cloud's worse rating of reliability and maintainability, Security at its security rating; with no analysis, each starts at A and takes the sonar notch. Then each tool below with findings takes one letter off its category's grade: a CI job on main's last run that failed, or open alerts, or a Scorecard score under `below`. Delivery starts at A and takes one letter for each notch in `delivery` that applies (to all, packages or services) and finds a gap. A grade never goes below E, but every notch is listed. The overall grade is the worst of the three. Drop an entry to drop its notch; `pubfleet board --rules FILE` reads another file. `workflows` and `repositories` tell the board where to look: which workflow files are CI, nightly and deploy, and which repositories release pubrules and pubrel.",
+  "name": "pubrules 2026-10",
   "sonar": "No SonarQube Cloud analysis",
   "tools": [
     { "tool": "format and lint", "category": "quality", "jobs": ["gates", "lint"], "covers": "rustfmt, clippy, ruff, eslint, doc coverage" },
@@ -33,5 +33,5 @@
     { "notch": "ci", "applies": "all" }
   ],
   "workflows": { "ci": ["ci.yml", "main.yml"], "nightly": "nightly.yml", "deploy": "deploy.yml" },
-  "repositories": { "pubkit": "Sustenaut/pubkit", "pubrel": "Sustenaut/pubrel" }
+  "repositories": { "pubrules": "Sustenaut/pubrules", "pubrel": "Sustenaut/pubrel" }
 }

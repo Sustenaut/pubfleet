@@ -10,13 +10,13 @@
   },
   "integration": {
    "value": {
-    "pubkit": true,
+    "pubrules": true,
     "pubrel": true
    }
   },
   "pins": {
    "value": {
-    "pubkit": [
+    "pubrules": [
      "0.14.2"
     ],
     "pubrel": [
@@ -26,7 +26,7 @@
   },
   "latest": {
    "value": {
-    "pubkit": "0.14.2",
+    "pubrules": "0.14.2",
     "pubrel": "0.5.4"
    }
   },

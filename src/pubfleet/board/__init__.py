@@ -20,7 +20,7 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
-from pubkit import __version__ as pubkit_version
+from pubrules import __version__ as pubrules_version
 
 from .. import __version__
 from . import page, rules as grading
@@ -51,7 +51,7 @@ def released(row_facts: dict, kind: str) -> str:
 
 
 def pinned(row_facts: dict) -> str:
-    pins = (row_facts.get("pins", {}).get("value") or {}).get("pubkit")
+    pins = (row_facts.get("pins", {}).get("value") or {}).get("pubrules")
     if pins == "self":
         return "itself"
     return ", ".join(pins) if pins else "-"
@@ -76,11 +76,11 @@ def build(repos: Path, rules: dict, transport: Transport, built: datetime) -> di
         graded = grading.grade(facts, rules, built)
         kind = facts["kind"]["value"]
         rows.append({"repo": item["repo"], "visibility": facts["visibility"]["value"] or "unknown",
-                     "kind": kind, "released": released(facts, kind), "pubkit": pinned(facts),
+                     "kind": kind, "released": released(facts, kind), "pubrules": pinned(facts),
                      **({"project": item["project"]} if item.get("project") else {}),
                      **graded, "facts": facts})
     rows = grading.order(rows)
-    return {"built": stamp(built), "pubkit": pubkit_version, "pubfleet": __version__, "rules": rules.get("name", "unnamed"),
+    return {"built": stamp(built), "pubrules": pubrules_version, "pubfleet": __version__, "rules": rules.get("name", "unnamed"),
             "summary": summary(rows, built), "problems": problems, "repos": rows,
             "calls": ledger.calls}
 

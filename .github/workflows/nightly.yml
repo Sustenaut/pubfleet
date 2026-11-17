@@ -5,22 +5,22 @@
 # JSON ({"repositories": [{"repo", "govern"}]}), and the secrets app-id, app-key,
 # notify-token and notify-user. It takes pubfleet's wheel and the update script
 # from the `pubfleet` input's latest release, whichever repository calls it,
-# and the pubkit that release's tests/requirements.lock pins
-# (.github/nightly/install.sh). So a pubkit release reaches governed
+# and the pubrules that release's tests/requirements.lock pins
+# (.github/nightly/install.sh). So a pubrules release reaches governed
 # repositories once pubfleet's own nightly has moved its lock to it and a
-# pubfleet release carries it: a night later than pubkit's own release, and
-# only once pubfleet's suite has passed with it. The `pubkit` input, a pubkit
+# pubfleet release carries it: a night later than pubrules' own release, and
+# only once pubfleet's suite has passed with it. The `pubrules` input, a pubrules
 # release tag, overrides that, for a fix that cannot wait.
 #
 # The report job checks each one out and runs `pubfleet freshness`: the job
-# summary is one table of the pubkit each pins, whether it conforms to the
+# summary is one table of the pubrules each pins, whether it conforms to the
 # latest standard, and its open exceptions.
 #
 # The update job then keeps one pull request per repository, on its
-# pubkit-nightly branch, with up to four commits, which `pubkit nightly` makes
+# pubrules-nightly branch, with up to four commits, which `pubrules nightly` makes
 # in its checkout (.github/nightly/update.sh):
 #
-# 1. every outdated pub* pin: the installed pubkit (in any of its *-ci.yml
+# 1. every outdated pub* pin: the installed pubrules (in any of its *-ci.yml
 #    workflows), pubrel's release workflow and pubrel-version,
 #    each tool ci.tools pins by tag, and the crates nightly.pins.crates names
 #    in Cargo.lock;
@@ -31,7 +31,7 @@
 #    allows, in package-lock.json only;
 # 4. tests/requirements.lock, re-resolved from requirements.txt.
 #
-# A repository's pubkit.json turns each language's updates off with, for
+# A repository's pubrules.json turns each language's updates off with, for
 # example, `"update": { "node": false }`, or all of them with `"update":
 # false`; the pins always come. Its CI checks advisories on every run
 # either way.
@@ -47,7 +47,7 @@
 # alone, with only contents, pull-requests and workflows write (and
 # actions read, to wait for its CI), that expires within the hour. The app is installed on every owner whose
 # repositories the input marks. Without NIGHTLY_APP_ID it falls back,
-# with a warning, to PUBKIT_BUMP_TOKEN, a token that may push branches and
+# with a warning, to PUBRULES_BUMP_TOKEN, a token that may push branches and
 # open pull requests there; with neither, the job only reports.
 # The secrets notify-token (a Slack bot's, chat:write) and notify-user, whom it
 # DMs; run by hand, SUSTENAUT_SLACK_BOT_TOKEN and SLACK_DM_USER_ID.
@@ -60,10 +60,10 @@ on:
         type: string
         required: true
         description: 'The repos file itself, as JSON: {"repositories": [{"repo", "govern"}]}'
-      pubkit:
+      pubrules:
         type: string
         default: ''
-        description: 'A pubkit release tag, such as v0.33.1, to move governed repositories to instead of the one this pubfleet is tested with'
+        description: 'A pubrules release tag, such as v0.33.1, to move governed repositories to instead of the one this pubfleet is tested with'
   workflow_call:
     inputs:
       repos:
@@ -74,10 +74,10 @@ on:
         type: string
         default: Sustenaut/pubfleet
         description: The pubfleet whose latest release runs this
-      pubkit:
+      pubrules:
         type: string
         default: ''
-        description: 'A pubkit release tag, such as v0.33.1, to move governed repositories to instead of the one that pubfleet release is tested with'
+        description: 'A pubrules release tag, such as v0.33.1, to move governed repositories to instead of the one that pubfleet release is tested with'
     secrets:
       app-id:
         required: false
@@ -95,7 +95,7 @@ on:
 env:
   # Called, the input; run by hand, this repository.
   PUBFLEET: '${{ inputs.pubfleet || github.repository }}'
-  PUBKIT_TAG: '${{ inputs.pubkit }}'
+  PUBRULES_TAG: '${{ inputs.pubrules }}'
 
 jobs:
   report:
@@ -111,8 +111,8 @@ jobs:
         with: { repository: '${{ env.PUBFLEET }}', ref: '${{ steps.wheel.outputs.tag }}', path: pubfleet, persist-credentials: false }
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: '3.14' }
-      # What governed repositories move to: the pubkit pubfleet's latest release is
-      # tested with (its lock), or the release the pubkit input names.
+      # What governed repositories move to: the pubrules pubfleet's latest release is
+      # tested with (its lock), or the release the pubrules input names.
       - run: pubfleet/.github/nightly/install.sh "${{ steps.wheel.outputs.tag }}"
         env: { GH_TOKEN: '${{ github.token }}' }
       - id: report
@@ -166,15 +166,15 @@ jobs:
             echo "::add-mask::$APP_TOKEN"
             echo "token=$APP_TOKEN" >> "$GITHUB_OUTPUT"
           elif [ -n "$BUMP_TOKEN" ]; then
-            echo "::warning::No app-id or NIGHTLY_APP_ID: falling back to PUBKIT_BUMP_TOKEN for $REPO. Set up the Sustenaut nightly app (README, The nightly)."
+            echo "::warning::No app-id or NIGHTLY_APP_ID: falling back to PUBRULES_BUMP_TOKEN for $REPO. Set up the Sustenaut nightly app (README, The nightly)."
             echo "token=$BUMP_TOKEN" >> "$GITHUB_OUTPUT"
           else
-            echo "No app-id, NIGHTLY_APP_ID or PUBKIT_BUMP_TOKEN: reporting only, no pull request for $REPO." >> "$GITHUB_STEP_SUMMARY"
+            echo "No app-id, NIGHTLY_APP_ID or PUBRULES_BUMP_TOKEN: reporting only, no pull request for $REPO." >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "present=$([ -n "$APP_TOKEN$BUMP_TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
         env:
           APP_TOKEN: '${{ steps.app.outputs.token }}'
-          BUMP_TOKEN: '${{ secrets.PUBKIT_BUMP_TOKEN }}'
+          BUMP_TOKEN: '${{ secrets.PUBRULES_BUMP_TOKEN }}'
       - if: steps.token.outputs.present == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { repository: '${{ env.PUBFLEET }}', ref: '${{ needs.report.outputs.tag }}', path: pubfleet, persist-credentials: false }
@@ -186,7 +186,7 @@ jobs:
         run: |
           latest() { gh release view --repo "$1" --json tagName --jq .tagName; }
           pubfleet/.github/nightly/install.sh "$TAG"
-          # pubdeploy, whose sustenaut.bump hook `pubkit pins` calls: it moves
+          # pubdeploy, whose sustenaut.bump hook `pubrules pins` calls: it moves
           # deploy.providers and the uses of pubdeploy's workflows, as bump does.
           deploy=$(latest Sustenaut/pubdeploy)
           python -m pip install --quiet \

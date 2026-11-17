@@ -7,14 +7,14 @@
 
 One file per GitHub owner says which of its repositories are graded, protected
 and governed. This checks its shape, that each repository exists under the
-owner, and that each one with `protect` has a protect block in its pubkit.json,
+owner, and that each one with `protect` has a protect block in its pubrules.json,
 since that block is what says how, that each one with `deploy` (optional, false
 when left out: the convergence engine walks the repositories that have it) has a
 deploy block there, for the same reason, and that the repository has reported every check
 the block requires, since a ruleset requiring one it never reports stops anything
 merging. A repository's `variables` (optional) are the values of its GitHub variables,
 which `pubfleet variables` keeps them to: each a string or JSON, and each one its own
-pubkit.json declares in its variables block. That last check is the best it can be: it looks at the default branch's newest
+pubrules.json declares in its variables block. That last check is the best it can be: it looks at the default branch's newest
 commit and a few recent pull requests, and says nothing when it can't read them. It is the state repository's one required
 check, so it builds nothing and takes seconds. It reads GitHub through `gh`,
 with a token that can read every repository the file names.
@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pubkit.protect import Api, ApiError, gh, remote, remote_config
+from pubrules.protect import Api, ApiError, gh, remote, remote_config
 
 from . import variables
 
@@ -92,7 +92,7 @@ def reported(api: Api, slug: str, branch: str) -> set[str] | None:
 def on_github(api: Api, owner: str, repos: dict) -> list[str]:
     """What GitHub says is wrong: a repository missing, moved or unreadable,
     one to protect that has no sound protect block, or one given variables its
-    pubkit.json doesn't declare."""
+    pubrules.json doesn't declare."""
     out = []
     for name, roles in repos.items():
         slug = f"{owner}/{name}"
@@ -123,7 +123,7 @@ def on_github(api: Api, owner: str, repos: dict) -> list[str]:
                 out.append(f"{slug} has \"deploy\" on, but {e}")
             else:
                 if not isinstance(config, dict) or not isinstance(config.get("deploy"), dict):
-                    out.append(f"{slug} has \"deploy\" on, but its pubkit.json has no deploy block")
+                    out.append(f"{slug} has \"deploy\" on, but its pubrules.json has no deploy block")
         if values := roles.get(variables.BLOCK):
             try:
                 block = variables.declared(api, slug)
@@ -131,13 +131,13 @@ def on_github(api: Api, owner: str, repos: dict) -> list[str]:
                 out.append(f"{slug} has variables in the state, but {e}")
                 continue
             if names := variables.undeclared(block, values):
-                out.append(f"{slug}: its pubkit.json doesn't declare {', '.join(names)}, "
+                out.append(f"{slug}: its pubrules.json doesn't declare {', '.join(names)}, "
                            f"which the state gives it")
     return out
 
 
 def repos_file(state: dict, role: str) -> dict:
-    """The repos file pubkit's other commands read: the repositories with `role` on, in the
+    """The repos file pubrules' other commands read: the repositories with `role` on, in the
     file's order. Nothing else reads a state file's roles."""
     entries = []
     for name, roles in state["repos"].items():

@@ -21,7 +21,7 @@ REPO = "example-org/secretly-named"
 
 def board(grade="A", built="2026-10-30T10:00:00Z"):
     return json.dumps({
-        "built": built, "pubkit": "0.23.0", "rules": "r", "summary": f"Built {built}", "problems": [],
+        "built": built, "pubrules": "0.23.0", "rules": "r", "summary": f"Built {built}", "problems": [],
         "repos": [{"repo": REPO, "overall": grade,
                    "grades": {"quality": {"letter": grade, "steps": [{"text": "x", "sources": [built]}]}},
                    "facts": {"sonar": {"value": grade, "sources": [built]}}}],

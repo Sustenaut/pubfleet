@@ -96,10 +96,10 @@ def scorecard(case, score):
     _set(case, "scorecard", {"score": score, "failing": ["Branch-Protection"]})
 
 
-@given(parsers.parse('it pins pubkit "{pinned}" where the latest is "{latest}"'))
+@given(parsers.parse('it pins pubrules "{pinned}" where the latest is "{latest}"'))
 def behind(case, pinned, latest):
-    case["facts"]["pins"]["value"]["pubkit"] = [pinned]
-    case["facts"]["latest"]["value"]["pubkit"] = latest
+    case["facts"]["pins"]["value"]["pubrules"] = [pinned]
+    case["facts"]["latest"]["value"]["pubrules"] = latest
 
 
 @given(parsers.parse('its secret scanning is "{scanning}" and its push protection "{push}"'))
@@ -307,7 +307,7 @@ def every_call(sources, read):
 @when(parsers.parse('the github connector reads "{repo}"'), target_fixture="read")
 def read_github(sources, repo):
     gh = _connector(sources, GitHub)
-    return {"repository": gh.repository(repo), "pubkit_json": gh.pubkit_json(repo),
+    return {"repository": gh.repository(repo), "pubrules_json": gh.pubrules_json(repo),
             "issues": gh.open_issues(repo), "dependabot": gh.dependabot_alerts(repo),
             "release": gh.latest_release(repo)}
 
@@ -317,9 +317,9 @@ def visibility(read, visibility):
     assert read["repository"].value["visibility"] == visibility
 
 
-@then(parsers.parse('its pubkit.json has the kind "{kind}"'))
+@then(parsers.parse('its pubrules.json has the kind "{kind}"'))
 def kind(read, kind):
-    assert json.loads(read["pubkit_json"].value)["kind"] == kind
+    assert json.loads(read["pubrules_json"].value)["kind"] == kind
 
 
 @then(parsers.parse("it has {count:d} open issue, the pull request it lists not counted"))
@@ -495,7 +495,7 @@ def no_network(modules):
 @when(parsers.parse('the board reads the pin "{line}"'), target_fixture="read")
 def board_reads_pin(line):
     from pubfleet.board import collect  # noqa: PLC0415
-    m = collect.PUBKIT_PIN.search(line)
+    m = collect.PUBRULES_PIN.search(line)
     assert m, line
     return (m["owner"], m["version"], m["commit"])
 

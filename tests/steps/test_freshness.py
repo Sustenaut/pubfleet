@@ -1,4 +1,4 @@
-"""Steps for `pubfleet freshness`: the rows, with pubkit's conform check stood in
+"""Steps for `pubfleet freshness`: the rows, with pubrules' conform check stood in
 for where a scenario needs a Rust repository's verdict."""
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ scenarios("freshness.feature")
                   r'"(?P<second>[^"]+)", with the open exception "(?P<exception>[^"]+)")$'),
        target_fixture="checkout")
 def rust_checkout(repo, monkeypatch, first, second, exception):
-    (repo / "pubkit.json").write_text('{"kind": "rust", "bin": "thing"}\n')
+    (repo / "pubrules.json").write_text('{"kind": "rust", "bin": "thing"}\n')
     problems = [p for p in (first, second) if p]
     lines = [f"open exception: {exception}"] if exception else []
     monkeypatch.setattr(freshness, "conform", lambda root, config: (lines, problems))
@@ -45,4 +45,4 @@ def job_summary(tmp_path, env):
 def summary_has(env, line):
     from pathlib import Path  # noqa: PLC0415
     text = Path(env["GITHUB_STEP_SUMMARY"]).read_text()
-    assert "| Repository | Pins pubkit |" in text and line in text
+    assert "| Repository | Pins pubrules |" in text and line in text

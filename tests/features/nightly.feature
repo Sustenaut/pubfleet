@@ -1,10 +1,10 @@
 Feature: The nightly keeps every governed repository current, through a pull request
   nightly.yml checks out each repository the repos input governs and runs
-  `pubkit nightly` there (.github/nightly/update.sh), which commits the moved
+  `pubrules nightly` there (.github/nightly/update.sh), which commits the moved
   pins and the updates and writes the pull request's body. The workflow keeps
-  one pull request per repository and never merges it. It installs the pubkit
+  one pull request per repository and never merges it. It installs the pubrules
   the latest pubfleet release is tested with (.github/nightly/install.sh), so
-  each repository moves to that pubkit.
+  each repository moves to that pubrules.
 
   Background:
     Given an empty repository
@@ -20,7 +20,7 @@ Feature: The nightly keeps every governed repository current, through a pull req
     When I parse the workflow "nightly.yml"
     Then each repository's token comes from the Sustenaut nightly app, for that repository alone
     And the token may write only contents, pull requests and workflows, and read actions
-    And without the app it falls back to PUBKIT_BUMP_TOKEN with a warning
+    And without the app it falls back to PUBRULES_BUMP_TOKEN with a warning
 
   Scenario: A control plane calls the nightly with a repos input and neutral secrets
     When I parse the workflow "nightly.yml"
@@ -29,7 +29,7 @@ Feature: The nightly keeps every governed repository current, through a pull req
     And a repository it can't read for the report doesn't stop the others
     And only what the repos input governs gets a pull request
     And it takes pubfleet's script and wheel from the same latest release, whichever repository calls it
-    And the pubkit it installs is the one that release is tested with, unless the pubkit input names one
+    And the pubrules it installs is the one that release is tested with, unless the pubrules input names one
 
   Scenario: The nightly takes pubrel's latest release when crates.io has it
     Given crates.io has pubrel "0.6.1, 0.6.2"
@@ -55,29 +55,29 @@ Feature: The nightly keeps every governed repository current, through a pull req
     When I parse the workflow "nightly.yml"
     Then it chooses pubrel with pubrel-version.sh, and installs that version
 
-  Scenario: The nightly installs the pubkit its pubfleet release's lock pins, by hash
+  Scenario: The nightly installs the pubrules its pubfleet release's lock pins, by hash
     When the nightly installs pubfleet "v0.1.0"
     Then it installs the lock "tests/requirements.lock" with --require-hashes, wheels only
     And it installs pubfleet's wheel "v0.1.0/pubfleet-0.1.0-py3-none-any.whl" without dependencies
-    And it installs no other pubkit
+    And it installs no other pubrules
 
-  Scenario: The pubkit input moves the repositories to that pubkit instead, with a warning
-    When the nightly installs pubfleet "v0.1.0" with the pubkit input "v0.33.1"
-    Then it installs pubkit's wheel "v0.33.1/pubkit-0.33.1-py3-none-any.whl" after the lock
-    And the install warns "governed repositories move to pubkit v0.33.1"
+  Scenario: The pubrules input moves the repositories to that pubrules instead, with a warning
+    When the nightly installs pubfleet "v0.1.0" with the pubrules input "v0.33.1"
+    Then it installs pubrules' wheel "v0.33.1/pubrules-0.33.1-py3-none-any.whl" after the lock
+    And the install warns "governed repositories move to pubrules v0.33.1"
 
-  Scenario: A pubkit input that is not a release tag is refused
-    When the nightly installs pubfleet "v0.1.0" with the pubkit input "main"
+  Scenario: A pubrules input that is not a release tag is refused
+    When the nightly installs pubfleet "v0.1.0" with the pubrules input "main"
     Then the install fails, saying "must be a release tag"
 
-  Scenario: The nightly never moves a repository to an older pubkit
-    Given a repository that pins pubkit "0.35.0"
-    When the backwards guard runs with pubkit "0.33.0" installed
-    Then the guard stops, saying "it runs pubkit 0.35.0, newer than tonight's 0.33.0: not moved back"
+  Scenario: The nightly never moves a repository to an older pubrules
+    Given a repository that pins pubrules "0.35.0"
+    When the backwards guard runs with pubrules "0.33.0" installed
+    Then the guard stops, saying "it runs pubrules 0.35.0, newer than tonight's 0.33.0: not moved back"
 
-  Scenario Outline: The same or a newer pubkit goes on
-    Given a repository that pins pubkit "<pinned>"
-    When the backwards guard runs with pubkit "<installed>" installed
+  Scenario Outline: The same or a newer pubrules goes on
+    Given a repository that pins pubrules "<pinned>"
+    When the backwards guard runs with pubrules "<installed>" installed
     Then the guard lets the nightly go on
 
     Examples:
@@ -89,4 +89,4 @@ Feature: The nightly keeps every governed repository current, through a pull req
 
   Scenario: The update script checks before it moves anything
     When I read the nightly's update script
-    Then it runs not-backwards.sh before pubkit nightly
+    Then it runs not-backwards.sh before pubrules nightly

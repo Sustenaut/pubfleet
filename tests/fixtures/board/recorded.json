@@ -55,13 +55,13 @@
   },
   "https://api.github.com/repos/example-org/private-thing/contents/.github/workflows/main.yml": {
    "json": {
-    "content": "am9iczoKICBjaGVja3M6CiAgICB1c2VzOiBzY2hyeWVyL3B1YmtpdC8uZ2l0aHViL3dvcmtmbG93cy9qb2Itc2VydmljZS1jaGVja3MueW1sQHYwLjEyLjYK",
+    "content": "am9iczoKICBjaGVja3M6CiAgICB1c2VzOiBzY2hyeWVyL3B1YnJ1bGVzLy5naXRodWIvd29ya2Zsb3dzL2pvYi1zZXJ2aWNlLWNoZWNrcy55bWxAdjAuMTIuNgo=",
     "encoding": "base64",
     "type": "file"
    },
    "status": 200
   },
-  "https://api.github.com/repos/example-org/private-thing/contents/pubkit.json": {
+  "https://api.github.com/repos/example-org/private-thing/contents/pubrules.json": {
    "json": {
     "content": "eyJraW5kIjogInNlcnZpY2UiLCAiY2kiOiB7fSwgInByb3RlY3QiOiB7ImNoZWNrcyI6IFsiY2kgLyBwYXNzZWQiXSwgInRhZ3MiOiBmYWxzZX19",
     "encoding": "base64",
@@ -77,7 +77,7 @@
   },
   "https://api.github.com/repos/example-org/private-thing/contents/tests/requirements.lock": {
    "json": {
-    "content": "cHVia2l0IEAgaHR0cHM6Ly9naXRodWIuY29tL3NjaHJ5ZXIvcHVia2l0L3JlbGVhc2VzL2Rvd25sb2FkL3YwLjEyLjYvcHVia2l0LTAuMTIuNi1weTMtbm9uZS1hbnkud2hsIFwKICAgIC0taGFzaD1zaGEyNTY6MDAK",
+    "content": "cHVicnVsZXMgQCBodHRwczovL2dpdGh1Yi5jb20vc2Nocnllci9wdWJydWxlcy9yZWxlYXNlcy9kb3dubG9hZC92MC4xMi42L3B1YnJ1bGVzLTAuMTIuNi1weTMtbm9uZS1hbnkud2hsIFwKICAgIC0taGFzaD1zaGEyNTY6MDAK",
     "encoding": "base64",
     "type": "file"
    },
@@ -115,7 +115,7 @@
    },
    "status": 404
   },
-  "https://api.github.com/repos/Sustenaut/pubkit/releases?per_page=10": {
+  "https://api.github.com/repos/Sustenaut/pubrules/releases?per_page=10": {
    "json": [
     {
      "draft": false,
@@ -204,13 +204,13 @@
   },
   "https://api.github.com/repos/example-org/pubthing/contents/.github/workflows/ci.yml": {
    "json": {
-    "content": "am9iczoKICBjaToKICAgIHVzZXM6IHNjaHJ5ZXIvcHVia2l0Ly5naXRodWIvd29ya2Zsb3dzL3J1c3QtY2kueW1sQHYwLjE0LjIKICByZWxlYXNlOgogICAgdXNlczogc2Nocnllci9wdWJyZWwvLmdpdGh1Yi93b3JrZmxvd3MvcmVsZWFzZS55bWxAdjAuNS40CiAgICB3aXRoOiB7IHB1YnJlbC12ZXJzaW9uOiB2MC41LjQgfQo=",
+    "content": "am9iczoKICBjaToKICAgIHVzZXM6IHNjaHJ5ZXIvcHVicnVsZXMvLmdpdGh1Yi93b3JrZmxvd3MvcnVzdC1jaS55bWxAdjAuMTQuMgogIHJlbGVhc2U6CiAgICB1c2VzOiBzY2hyeWVyL3B1YnJlbC8uZ2l0aHViL3dvcmtmbG93cy9yZWxlYXNlLnltbEB2MC41LjQKICAgIHdpdGg6IHsgcHVicmVsLXZlcnNpb246IHYwLjUuNCB9Cg==",
     "encoding": "base64",
     "type": "file"
    },
    "status": 200
   },
-  "https://api.github.com/repos/example-org/pubthing/contents/pubkit.json": {
+  "https://api.github.com/repos/example-org/pubthing/contents/pubrules.json": {
    "json": {
     "content": "eyJraW5kIjogInJ1c3QiLCAicHJvdGVjdCI6IHsiY2hlY2tzIjogWyJjaSAvIHBhc3NlZCIsICJyZWxlYXNlIC8gcmVsZWFzZSJdLCAicXVldWUiOiBmYWxzZX19",
     "encoding": "base64",
@@ -228,7 +228,7 @@
   },
   "https://api.github.com/repos/example-org/pubthing/contents/tests/requirements.lock": {
    "json": {
-    "content": "cHVia2l0IEAgaHR0cHM6Ly9naXRodWIuY29tL3NjaHJ5ZXIvcHVia2l0L3JlbGVhc2VzL2Rvd25sb2FkL3YwLjE0LjIvcHVia2l0LTAuMTQuMi1weTMtbm9uZS1hbnkud2hsIFwKICAgIC0taGFzaD1zaGEyNTY6MDAK",
+    "content": "cHVicnVsZXMgQCBodHRwczovL2dpdGh1Yi5jb20vc2Nocnllci9wdWJydWxlcy9yZWxlYXNlcy9kb3dubG9hZC92MC4xNC4yL3B1YnJ1bGVzLTAuMTQuMi1weTMtbm9uZS1hbnkud2hsIFwKICAgIC0taGFzaD1zaGEyNTY6MDAK",
     "encoding": "base64",
     "type": "file"
    },
@@ -514,13 +514,13 @@
   },
   "https://api.github.com/repos/example-org/site-thing/contents/.github/workflows/main.yml": {
    "json": {
-    "content": "am9iczoKICBjaGVja3M6CiAgICB1c2VzOiBzY2hyeWVyL3B1YmtpdC8uZ2l0aHViL3dvcmtmbG93cy9qb2Itc2VydmljZS1jaGVja3MueW1sQHYwLjE0LjIK",
+    "content": "am9iczoKICBjaGVja3M6CiAgICB1c2VzOiBzY2hyeWVyL3B1YnJ1bGVzLy5naXRodWIvd29ya2Zsb3dzL2pvYi1zZXJ2aWNlLWNoZWNrcy55bWxAdjAuMTQuMgo=",
     "encoding": "base64",
     "type": "file"
    },
    "status": 200
   },
-  "https://api.github.com/repos/example-org/site-thing/contents/pubkit.json": {
+  "https://api.github.com/repos/example-org/site-thing/contents/pubrules.json": {
    "json": {
     "content": "eyJraW5kIjogInNlcnZpY2UiLCAiY2kiOiB7fSwgInByb3RlY3QiOiB7ImNoZWNrcyI6IFsiY2kgLyBwYXNzZWQiXSwgInRhZ3MiOiBmYWxzZSwgInF1ZXVlIjogZmFsc2V9LCAibGl2ZSI6IHsiaGVhbHRoIjogImh0dHBzOi8vdmlzaXQuZXhhbXBsZS5ldS9oZWFsdGgiLCAidGVzdCI6ICJsaXZlLnltbCJ9fQ==",
     "encoding": "base64",
@@ -536,7 +536,7 @@
   },
   "https://api.github.com/repos/example-org/site-thing/contents/tests/requirements.lock": {
    "json": {
-    "content": "cHVia2l0IEAgaHR0cHM6Ly9naXRodWIuY29tL3NjaHJ5ZXIvcHVia2l0L3JlbGVhc2VzL2Rvd25sb2FkL3YwLjE0LjIvcHVia2l0LTAuMTQuMi1weTMtbm9uZS1hbnkud2hsIFwKICAgIC0taGFzaD1zaGEyNTY6MDAK",
+    "content": "cHVicnVsZXMgQCBodHRwczovL2dpdGh1Yi5jb20vc2Nocnllci9wdWJydWxlcy9yZWxlYXNlcy9kb3dubG9hZC92MC4xNC4yL3B1YnJ1bGVzLTAuMTQuMi1weTMtbm9uZS1hbnkud2hsIFwKICAgIC0taGFzaD1zaGEyNTY6MDAK",
     "encoding": "base64",
     "type": "file"
    },

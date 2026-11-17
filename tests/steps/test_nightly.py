@@ -1,5 +1,5 @@
 """Steps for the nightly's loop across repositories: nightly.yml, the script
-it runs in each checkout (`pubkit nightly` makes the commits there), and
+it runs in each checkout (`pubrules nightly` makes the commits there), and
 install.sh and pubrel-version.sh, which choose what it installs."""
 
 from __future__ import annotations
@@ -82,10 +82,10 @@ def app_permissions(workflow):
                      "permission-workflows": "write", "permission-actions": "read"}
 
 
-@then("without the app it falls back to PUBKIT_BUMP_TOKEN with a warning")
+@then("without the app it falls back to PUBRULES_BUMP_TOKEN with a warning")
 def fallback(workflow):
     token = next(s for s in _steps(workflow) if s.get("id") == "token")
-    assert token["env"]["BUMP_TOKEN"] == "${{ secrets.PUBKIT_BUMP_TOKEN }}"
+    assert token["env"]["BUMP_TOKEN"] == "${{ secrets.PUBRULES_BUMP_TOKEN }}"
     assert "::warning::No app-id or NIGHTLY_APP_ID" in token["run"]
     assert token["run"].index("APP_TOKEN") < token["run"].index("BUMP_TOKEN")
     assert "GH_TOKEN" not in workflow["data"]["jobs"]["update"].get("env", {})
@@ -134,15 +134,15 @@ def same_release(workflow):
     assert '$GITHUB_REPOSITORY' not in "".join(s.get("run", "") for s in _steps(workflow))
 
 
-@then("the pubkit it installs is the one that release is tested with, unless the pubkit input names one")
-def pubkit_input(workflow):
+@then("the pubrules it installs is the one that release is tested with, unless the pubrules input names one")
+def pubrules_input(workflow):
     on = workflow["data"][True]
     for trigger in ("workflow_call", "workflow_dispatch"):
-        assert on[trigger]["inputs"]["pubkit"]["default"] == ""
-    assert workflow["data"]["env"]["PUBKIT_TAG"] == "${{ inputs.pubkit }}"
+        assert on[trigger]["inputs"]["pubrules"]["default"] == ""
+    assert workflow["data"]["env"]["PUBRULES_TAG"] == "${{ inputs.pubrules }}"
     assert "releases/download" not in "".join(
         s.get("run", "") for job in workflow["data"]["jobs"].values() for s in job["steps"]
-        if "pubkit-" in s.get("run", ""))
+        if "pubrules-" in s.get("run", ""))
 
 
 # Which pubrel the nightly takes, against a crates.io answered here.
@@ -225,26 +225,26 @@ def chooses(workflow):
     assert install["env"]["PUBREL"] == "${{ steps.latest.outputs.pubrel }}"
 
 
-# What install.sh installs, with python, pubfleet and pubkit stood in for.
+# What install.sh installs, with python, pubfleet and pubrules stood in for.
 
 FAKE = """#!/usr/bin/env bash
 printf '%s\\n' "$*" >> "$CALLS"
 """
 
 
-@when(parsers.re(r'the nightly installs pubfleet "(?P<tag>[^"]+)"(?: with the pubkit input "(?P<pubkit>[^"]+)")?$'),
+@when(parsers.re(r'the nightly installs pubfleet "(?P<tag>[^"]+)"(?: with the pubrules input "(?P<pubrules>[^"]+)")?$'),
       target_fixture="installed")
-def install(tmp_path, tag, pubkit):
+def install(tmp_path, tag, pubrules):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    for name in ("python", "pubfleet", "pubkit"):
+    for name in ("python", "pubfleet", "pubrules"):
         (bin_dir / name).write_text(FAKE)
         (bin_dir / name).chmod(0o755)
     calls = tmp_path / "calls"
     env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "CALLS": str(calls)}
-    env.pop("PUBKIT_TAG", None)
-    if pubkit:
-        env["PUBKIT_TAG"] = pubkit
+    env.pop("PUBRULES_TAG", None)
+    if pubrules:
+        env["PUBRULES_TAG"] = pubrules
     done = subprocess.run([str(GITHUB / "nightly" / "install.sh"), tag], capture_output=True, text=True,
                           env=env, check=False, timeout=30)
     lines = calls.read_text().splitlines() if calls.is_file() else []
@@ -265,18 +265,18 @@ def installs_pubfleet(installed, wheel):
         f"--no-deps https://github.com/Sustenaut/pubfleet/releases/download/{wheel}")
 
 
-@then("it installs no other pubkit")
-def no_other_pubkit(installed):
+@then("it installs no other pubrules")
+def no_other_pubrules(installed):
     assert len(installed["pip"]) == 2
     assert "::warning::" not in installed["done"].stdout
 
 
-@then(parsers.parse('it installs pubkit\'s wheel "{wheel}" after the lock'))
-def installs_pubkit(installed, wheel):
+@then(parsers.parse('it installs pubrules\' wheel "{wheel}" after the lock'))
+def installs_pubrules(installed, wheel):
     assert installed["done"].returncode == 0, installed["done"].stderr
     assert len(installed["pip"]) == 3
     assert installed["pip"][2].endswith(
-        f"--no-deps https://github.com/Sustenaut/pubkit/releases/download/{wheel}")
+        f"--no-deps https://github.com/Sustenaut/pubrules/releases/download/{wheel}")
 
 
 @then(parsers.parse('the install warns "{text}"'))
@@ -301,20 +301,20 @@ def _guard(tmp_path, pinned, installed):
     repo.mkdir()
     bin_dir.mkdir()
     if pinned:
-        (repo / "pubkit").write_text(f"#!/usr/bin/env bash\n# Managed by pubkit {pinned}: `pubkit sync` rewrites this file\n")
-    fake = bin_dir / "pubkit"
-    fake.write_text(f"#!/bin/sh\necho pubkit {installed}\n")
+        (repo / "pubrules").write_text(f"#!/usr/bin/env bash\n# Managed by pubrules {pinned}: `pubrules sync` rewrites this file\n")
+    fake = bin_dir / "pubrules"
+    fake.write_text(f"#!/bin/sh\necho pubrules {installed}\n")
     fake.chmod(0o755)
     env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
     return subprocess.run([str(GUARD), str(repo)], env=env, capture_output=True, text=True, check=False)
 
 
-@given(parsers.parse('a repository that pins pubkit "{pinned}"'), target_fixture="pinned")
-def pins_pubkit(pinned):
+@given(parsers.parse('a repository that pins pubrules "{pinned}"'), target_fixture="pinned")
+def pins_pubrules(pinned):
     return None if pinned == "none" else pinned
 
 
-@when(parsers.parse('the backwards guard runs with pubkit "{installed}" installed'), target_fixture="guarded")
+@when(parsers.parse('the backwards guard runs with pubrules "{installed}" installed'), target_fixture="guarded")
 def guard_runs(tmp_path, pinned, installed):
     return _guard(tmp_path, pinned, installed)
 
@@ -335,6 +335,6 @@ def update_script():
     return SCRIPT.read_text()
 
 
-@then("it runs not-backwards.sh before pubkit nightly")
+@then("it runs not-backwards.sh before pubrules nightly")
 def guard_first(script):
-    assert script.index("not-backwards.sh") < script.index("pubkit nightly")
+    assert script.index("not-backwards.sh") < script.index("pubrules nightly")

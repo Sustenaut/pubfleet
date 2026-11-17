@@ -1,7 +1,7 @@
 """The sonarcloud connector: SonarQube Cloud's Web API, for a project's
 reliability, maintainability and security ratings and its quality gate.
 
-pubkit's CI names a repository's project OWNER_REPO. A public project
+pubrules' CI names a repository's project OWNER_REPO. A public project
 needs no token; SONAR_TOKEN, when set, reads a private one.
 """
 

@@ -84,7 +84,7 @@
   ],
   "other_secrets": [
     {
-      "name": "PUBKIT_BUMP_TOKEN",
+      "name": "PUBRULES_BUMP_TOKEN",
       "reason": "The nightly's fallback GitHub token, for when no app is set up; it reaches only GitHub"
     }
   ]

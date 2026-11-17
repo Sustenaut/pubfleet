@@ -103,7 +103,7 @@ def render(board: dict) -> str:
             f"<tr><td class=mono>{escape(row['repo'])}{private}{project} <span class=tag>{row['kind']}</span></td>"
             f"<td class=overall data-label=Overall><span class=\"dot {overall}\">{overall}</span></td>"
             f"<td class=mono data-label=Released>{escape(row['released'])}</td>"
-            f"<td class=mono data-label=pubkit>{escape(row['pubkit'])}</td>"
+            f"<td class=mono data-label=pubrules>{escape(row['pubrules'])}</td>"
             f"{cells}</tr>")
     problems = "".join(f"<p class=problems>{escape(p)}</p>" for p in board.get("problems", []))
     return f"""<!doctype html>
@@ -112,11 +112,11 @@ def render(board: dict) -> str:
 <body><main>
 <h1>Release board</h1>
 <p>{escape(board['summary'])}</p>
-<p class=meta>Graded by pubkit {escape(board['pubkit'])} with the rules "{escape(board['rules'])}".
+<p class=meta>Graded by pubrules {escape(board['pubrules'])} with the rules "{escape(board['rules'])}".
 Hover or tab to a grade for how it was reached; board.json has every reading.</p>
 {problems}
 <div class=wrap><table>
-<thead><tr><th>Repository</th><th>Overall</th><th>Released</th><th>pubkit</th><th>Quality</th>
+<thead><tr><th>Repository</th><th>Overall</th><th>Released</th><th>pubrules</th><th>Quality</th>
 <th>Security</th><th>Delivery</th></tr></thead>
 <tbody>
 {chr(10).join(rows)}

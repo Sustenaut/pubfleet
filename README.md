@@ -3,11 +3,11 @@
 What a control plane runs across many repositories at once: it grades them
 (`pubfleet board`), publishes the grades (`pubfleet board-publish`), checks
 and reads the owner's state file (`pubfleet state`), keeps their GitHub
-variables (`pubfleet variables`), reports which pubkit each pins
+variables (`pubfleet variables`), reports which pubrules each pins
 (`pubfleet freshness`), and opens their nightly pull requests (the reusable
 `nightly.yml`). Everything that runs inside one repository about itself
-stays in [pubkit](https://github.com/Sustenaut/pubkit): `sync`, `protect`,
-`bump`, and `pubkit nightly`, which makes the nightly's commits in each
+stays in [pubrules](https://github.com/Sustenaut/pubrules): `sync`, `protect`,
+`bump`, and `pubrules nightly`, which makes the nightly's commits in each
 checkout.
 
     pubfleet board --out DIR --repos FILE [--rules FILE] [--replay FILE] [--record FILE]
@@ -19,42 +19,42 @@ checkout.
 
 ## Installing
 
-A control plane lists pubfleet's wheel beside pubkit's in its
+A control plane lists pubfleet's wheel beside pubrules' in its
 `tests/requirements.txt`, and installs the hash-locked set:
 
     pubfleet @ https://github.com/Sustenaut/pubfleet/releases/download/vX.Y.Z/pubfleet-X.Y.Z-py3-none-any.whl
 
-`pubkit lock` pins both by sha256. pubfleet declares the oldest pubkit it
-works with (`pubkit>=` in pyproject.toml); its own `tests/requirements.lock`
-pins the pubkit it is tested with.
+`pubrules lock` pins both by sha256. pubfleet declares the oldest pubrules it
+works with (`pubrules>=` in pyproject.toml); its own `tests/requirements.lock`
+pins the pubrules it is tested with.
 
-## What pubfleet takes from pubkit
+## What pubfleet takes from pubrules
 
-pubfleet uses pubkit as a library, and copies none of it: the board grades a
-repository's protection against pubkit's own ruleset, and a copy would drift
-from it. pubkit never imports pubfleet and names nothing of it. pubfleet
-offers no `sustenaut.sync` or `sustenaut.bump` hook, so pubkit never loads it
+pubfleet uses pubrules as a library, and copies none of it: the board grades a
+repository's protection against pubrules' own ruleset, and a copy would drift
+from it. pubrules never imports pubfleet and names nothing of it. pubfleet
+offers no `sustenaut.sync` or `sustenaut.bump` hook, so pubrules never loads it
 into its own process.
 
-These are all the names it takes, which `tests/features/pubkit.feature`
-holds it to, and which the installed pubkit must have:
+These are all the names it takes, which `tests/features/pubrules.feature`
+holds it to, and which the installed pubrules must have:
 
-- the standard's protection: `pubkit.protect.entry`, `pubkit.protect.ruleset`,
-  `pubkit.protect.tag_ruleset`, `pubkit.protect.differences`,
-  `pubkit.protect.on_default_branch`, `pubkit.protect.on_release_tags`,
-  `pubkit.protect.remote`;
-- the GitHub calls: `pubkit.protect.gh`, `pubkit.protect.gh_set`,
-  `pubkit.protect.Api`, `pubkit.protect.ApiError`,
-  `pubkit.protect.remote_config`;
-- the repos file: `pubkit.repos.read`, `pubkit.repos.entries`;
-- the variables block's shape: `pubkit.variables.BLOCK`,
-  `pubkit.variables.block_problems`, `pubkit.variables.name_problem`;
-- the pins the board and freshness read: `pubkit.refs.ANY_OWNER`,
-  `pubkit.refs.AT`, `pubkit.refs.VERSION`, `pubkit.refs.RELEASE_PIN`,
-  `pubkit.freshness.PIN`, `pubkit.freshness.pinned`,
-  `pubkit.nightly.PUBREL_VERSION`;
-- the standard freshness judges by: `pubkit.conform.run`, `pubkit.__version__`;
-- `pubkit.paths.confined`, for the files a command is given.
+- the standard's protection: `pubrules.protect.entry`, `pubrules.protect.ruleset`,
+  `pubrules.protect.tag_ruleset`, `pubrules.protect.differences`,
+  `pubrules.protect.on_default_branch`, `pubrules.protect.on_release_tags`,
+  `pubrules.protect.remote`;
+- the GitHub calls: `pubrules.protect.gh`, `pubrules.protect.gh_set`,
+  `pubrules.protect.Api`, `pubrules.protect.ApiError`,
+  `pubrules.protect.remote_config`;
+- the repos file: `pubrules.repos.read`, `pubrules.repos.entries`;
+- the variables block's shape: `pubrules.variables.BLOCK`,
+  `pubrules.variables.block_problems`, `pubrules.variables.name_problem`;
+- the pins the board and freshness read: `pubrules.refs.ANY_OWNER`,
+  `pubrules.refs.AT`, `pubrules.refs.VERSION`, `pubrules.refs.RELEASE_PIN`,
+  `pubrules.freshness.PIN`, `pubrules.freshness.pinned`,
+  `pubrules.nightly.PUBREL_VERSION`;
+- the standard freshness judges by: `pubrules.conform.run`, `pubrules.__version__`;
+- `pubrules.paths.confined`, for the files a command is given.
 
 A name pubfleet wants beyond these is a sign the code belongs on one side or
 the other, not a reason to widen the list.
@@ -85,21 +85,21 @@ with every notch listed; the overall grade is the worst of the three.
   review for Security), open Dependabot, code scanning or secret scanning
   alerts, and an OpenSSF Scorecard under 7 for a public repository.
   Alerts that are switched off are listed with no notch.
-- **Delivery** starts at A and takes a notch for each of: a pinned pubkit
-  or pubrel behind its latest release; not integrated with pubkit
-  (services) or with pubkit and pubrel (packages, which have a
+- **Delivery** starts at A and takes a notch for each of: a pinned pubrules
+  or pubrel behind its latest release; not integrated with pubrules
+  (services) or with pubrules and pubrel (packages, which have a
   release.json); for a service, no observability (its health URL does not
   answer) and no continuous live testing (its live-test workflow not green
   in the last 24 hours); no release (a package's tag, a service's
   production deploy) in two months; any open issue (pull requests aside);
   no nightly (not governed, and no `nightly.yml` run in two days);
-  protection that differs from what `pubkit protect --check` wants, or no
+  protection that differs from what `pubrules protect --check` wants, or no
   ruleset at all on a private repository GitHub's plan gives none; and a
   red last CI run on main. A fact the board could not read takes its
   notch: a board that cannot see does not grade green.
 
 A service declares what its observability and live testing are in its
-`pubkit.json`:
+`pubrules.json`:
 
 ```json
 "live": { "health": "https://example.eu/health", "test": "live.yml", "deploy": "deploy.yml" }
@@ -111,7 +111,7 @@ its production deploys (`deploy.yml` by default).
 
 Each source has one connector in `src/pubfleet/board/connectors/`, and
 nothing else reads it: `lists` (the two lists), `github` (the REST API:
-visibility, pubkit.json, release.json, the lock and workflow pins,
+visibility, pubrules.json, release.json, the lock and workflow pins,
 rulesets, releases, issues and alerts), `actions` (runs and jobs on main,
 nightly, live-test and deploy runs), `sonarcloud` (project `OWNER_REPO`),
 `scorecard` (public repositories) and `live` (the health URLs). Each
@@ -123,14 +123,14 @@ such a file instead of the network.
 
 [`board.yml`](.github/workflows/board.yml) is the reusable workflow: it
 checks out the caller, installs what its `tests/requirements.lock` pins
-(wheels only, by hash: the caller's own pubfleet and pubkit),
+(wheels only, by hash: the caller's own pubfleet and pubrules),
 runs `pubfleet board` with the caller's read-only `token` and its `repos` input
 (the repos file itself, as JSON), and uploads board.json and index.html as the `board` artifact, kept 90 days. It
 deploys nothing.
 
 ## The repos file
 
-Which repositories pubfleet and `pubkit protect` act on comes from outside them, in one file, whose format is pubkit's (`pubkit.repos`):
+Which repositories pubfleet and `pubrules protect` act on comes from outside them, in one file, whose format is pubrules' (`pubrules.repos`):
 
 ```json
 { "repositories": [
@@ -139,10 +139,10 @@ Which repositories pubfleet and `pubkit protect` act on comes from outside them,
 ] }
 ```
 
-`protect` says it should carry pubkit's rulesets, and `govern` that a nightly
+`protect` says it should carry pubrules' rulesets, and `govern` that a nightly
 keeps it current; each is false when left out. `project`, optional, labels it on
-the board. How a repository is protected stays in its own `pubkit.json`'s
-protect block. `pubfleet board --repos FILE`, `pubkit protect [--check] --repos
+the board. How a repository is protected stays in its own `pubrules.json`'s
+protect block. `pubfleet board --repos FILE`, `pubrules protect [--check] --repos
 FILE` and `pubfleet freshness --repos FILE [DIR]` read it (freshness reports the
 governed ones, each checked out at `DIR/<name>`), and the reusable `board.yml`
 and `nightly.yml` take its contents as a `repos` input.
@@ -158,9 +158,9 @@ write` and no secret, and the tenant must let that job write.
 
 ### State files
 
-    pubkit state --check [FILE]
-    pubkit state --repos-for board|govern|deploy [FILE]
-    pubkit state --discover [--body PATH] [FILE]
+    pubrules state --check [FILE]
+    pubrules state --repos-for board|govern|deploy [FILE]
+    pubrules state --discover [--body PATH] [FILE]
 
 `--check` checks a state repository's `state.json` (by default in the working directory),
 which a control plane keeps for one GitHub owner, and `--repos-for` prints the repos file
@@ -175,7 +175,7 @@ for one of its roles:
 ```
 
 `--discover` adds the owner's repositories the file does not list yet, archived ones
-and forks left out: each on the board, protected when its own `pubkit.json` has a protect
+and forks left out: each on the board, protected when its own `pubrules.json` has a protect
 block (which `--check` requires of protect), and not governed, with no project and no
 deploy. It rewrites the file as state files are kept (two-space JSON, repositories in name
 order), prints how many it added, and with `--body` writes a pull request's description:
@@ -184,7 +184,7 @@ that are archived or gone, which it never removes. A state repository's nightly 
 and opens that pull request for an operator to merge.
 
 `deploy`, optional and false when left out, marks a repository the convergence
-engine walks: the state says whether, and the repository's `pubkit.json` deploy
+engine walks: the state says whether, and the repository's `pubrules.json` deploy
 block says how.
 
 It checks the file's shape, then through `gh` that each repository exists under
@@ -200,7 +200,7 @@ one required check.
 
 A repository's GitHub variables that aren't secret can live in the state file, so a
 change to one is a reviewed pull request with a history. The repository's own
-`pubkit.json` declares only their names (pubkit's `sync --check` checks that block's shape), and may name the workflow that reads them,
+`pubrules.json` declares only their names (pubrules' `sync --check` checks that block's shape), and may name the workflow that reads them,
 to run once one changes:
 
 ```json
@@ -234,12 +234,12 @@ for a GitHub App).
     pubfleet freshness [--json] DIR...
     pubfleet freshness [--json] --repos FILE [DIR]
 
-reports, for each checked-out repository, the pubkit its lock pins, whether it
-is the installed one, whether it conforms to that pubkit's standard, and its
+reports, for each checked-out repository, the pubrules its lock pins, whether it
+is the installed one, whether it conforms to that pubrules' standard, and its
 open exceptions: one Markdown table, also appended to the GitHub step summary
 when there is one. With `--repos` it reports the repositories the file marks
 to govern, each checked out at `DIR/<name>`, and says which are not checked
-out. It reads; it changes nothing. Moving a repository to a pubkit is `pubkit
+out. It reads; it changes nothing. Moving a repository to a pubrules is `pubrules
 bump`'s, and the nightly's.
 
 ## The nightly
@@ -253,24 +253,24 @@ release supplies the wheel and the scripts in `.github/nightly/`.
 
 Its report job checks each governed repository out and runs `pubfleet
 freshness` into the summary. Its update job then keeps one pull request per
-repository, on its `pubkit-nightly` branch (`.github/nightly/update.sh`): it
-runs `pubkit nightly` in the checkout, which commits the moved pub* pins, the
+repository, on its `pubrules-nightly` branch (`.github/nightly/update.sh`): it
+runs `pubrules nightly` in the checkout, which commits the moved pub* pins, the
 audited crate updates, the npm updates and the re-locked Python requirements,
 and writes the body. What those commits hold, and the `update` and `security`
-settings a repository's `pubkit.json` gives them, are pubkit's (its README,
+settings a repository's `pubrules.json` gives them, are pubrules' (its README,
 "The nightly"). An open pull request is updated, never a second one opened,
 and left alone when the night brings nothing new. When its CI fails, the pins
 are tested alone: if they pass, the dependency commits are dropped. Nothing
 merges it: the Sustenaut bot sends a Slack DM when it is green or fails.
 
-**Which pubkit.** The nightly installs the pubkit that the latest pubfleet
+**Which pubrules.** The nightly installs the pubrules that the latest pubfleet
 release's `tests/requirements.lock` pins, by hash
-(`.github/nightly/install.sh`), and `pubkit nightly` moves each repository to
-the pubkit it runs as. So a pubkit release reaches governed repositories
+(`.github/nightly/install.sh`), and `pubrules nightly` moves each repository to
+the pubrules it runs as. So a pubrules release reaches governed repositories
 once pubfleet's own nightly has moved its lock to it and a pubfleet release
-carries it: a night later than pubkit's release, and only once pubfleet's
-suite has passed with it. The `pubkit` input, a pubkit release tag such as
-`v0.33.1`, installs that pubkit instead, with a warning, for a fix that must
+carries it: a night later than pubrules' release, and only once pubfleet's
+suite has passed with it. The `pubrules` input, a pubrules release tag such as
+`v0.33.1`, installs that pubrules instead, with a warning, for a fix that must
 go out at once.
 
 It pushes and opens the pull requests as the **Sustenaut nightly** GitHub
@@ -280,7 +280,7 @@ pull-requests and workflows write and actions read, which expires within the
 hour (`actions/create-github-app-token`). The repository variable
 `NIGHTLY_APP_ID` and secret `NIGHTLY_APP_KEY` (the app's private key) set it
 up when run by hand, and `app-id` and `app-key` when called. Without them it
-falls back, with a warning, to a `PUBKIT_BUMP_TOKEN` secret, and with neither
+falls back, with a warning, to a `PUBRULES_BUMP_TOKEN` secret, and with neither
 it only reports.
 
 `.github/nightly/pubrel-version.sh` chooses the pubrel it installs, and pins
@@ -290,7 +290,7 @@ has that version, else the newest crates.io has, with a warning.
 ## Developing
 
     make venv         # the hash-locked environment, this checkout installed editable
-    make check        # what CI runs: ./pubkit sync --check and the suite
+    make check        # what CI runs: ./pubrules sync --check and the suite
 
 Releases are pubrel's: a code change records what it changes (`pubrel add`),
 and `pubrel prepare` cuts the release pull request. `wheel.yml` attaches the
