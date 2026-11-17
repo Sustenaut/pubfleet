@@ -1,4 +1,0 @@
-{
-  "category": "fixed",
-  "change": "pubfleet state --check reads the repository it runs in (GITHUB_REPOSITORY) from the pubrules.json beside the state file, not from its default branch, so a state repository's pull request that adds or moves its own protect block can pass its own check"
-}
