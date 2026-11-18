@@ -34,15 +34,3 @@ def conforms(row, verdict):
 @then(parsers.parse('its exceptions are "{exceptions}"'))
 def exceptions_are(row, exceptions):
     assert row["exceptions"] == exceptions.split(", ")
-
-
-@given("a job summary file")
-def job_summary(tmp_path, env):
-    env["GITHUB_STEP_SUMMARY"] = str(tmp_path / "summary.md")
-
-
-@then(parsers.parse('the job summary has the table, with "{line}"'))
-def summary_has(env, line):
-    from pathlib import Path  # noqa: PLC0415
-    text = Path(env["GITHUB_STEP_SUMMARY"]).read_text()
-    assert "| Repository | Pins pubrules |" in text and line in text

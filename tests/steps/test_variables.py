@@ -1,15 +1,15 @@
 """Steps for `pubfleet variables` and the state check of variables, against a fake
-`gh` that answers from a JSON file, keeps what it is told to set, and logs every call."""
+`gh` among pubtest's stand-ins that answers from a JSON file, keeps what it is
+told to set, and logs every call, with what it read, to the stand-ins' log."""
 
 from __future__ import annotations
 
 import base64
 import json
-import os
 import sys
-from pathlib import Path
 
 import pytest
+from conftest import fake_program
 from pytest_bdd import given, parsers, scenarios, then
 
 scenarios("variables.feature")
@@ -20,8 +20,8 @@ path = os.environ["FAKE_GH"]
 state = json.load(open(path))
 args = sys.argv[1:]
 read = sys.stdin.read() if args[0] == "variable" or "--input" in args else ""
-with open(path + ".log", "a") as log:
-    log.write(json.dumps({{"args": args, "read": read}}) + "\\n")
+with open(os.environ["FAKE_LOG"], "a") as log:
+    log.write(json.dumps({{"name": "gh", "args": args, "input": read}}) + "\\n")
 def save():
     json.dump(state, open(path, "w"))
 def missing():
@@ -62,17 +62,12 @@ missing()
 
 
 @pytest.fixture(autouse=True)
-def github(tmp_path, env):
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    gh = bin_dir / "gh"
-    gh.write_text(FAKE_GH)
-    gh.chmod(0o755)
+def github(pubtest_ctx, tmp_path, monkeypatch):
+    fake_program(pubtest_ctx, tmp_path, monkeypatch, "gh", FAKE_GH)
     state = tmp_path / "github.json"
     state.write_text(json.dumps({"repos": {"example-org/two": {"default_branch": "main"}},
                                  "files": {}, "variables": {}, "refuse": [], "ran": []}))
-    env["FAKE_GH"] = str(state)
-    env["PATH"] = f"{bin_dir}{os.pathsep}{os.environ['PATH']}"
+    monkeypatch.setenv("FAKE_GH", str(state))
     return state
 
 
@@ -82,9 +77,8 @@ def _edit(github, change):
     github.write_text(json.dumps(state))
 
 
-def _calls(github):
-    log = Path(f"{github}.log")
-    return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+def _calls(pubtest_ctx):
+    return pubtest_ctx.standins.entries("gh")
 
 
 def _config(github, slug, config):
@@ -145,29 +139,14 @@ def ran(github, workflow, branch, slug, count):
 
 
 @then("nothing was set or run")
-def nothing_set(github):
+def nothing_set(pubtest_ctx, github):
     state = json.loads(github.read_text())
     assert state["ran"] == []
-    assert not [c for c in _calls(github) if c["args"][0] == "variable" or "POST" in c["args"]]
+    assert not [c for c in _calls(pubtest_ctx) if c["args"][0] == "variable" or "POST" in c["args"]]
 
 
 @then("no value was on a command line")
-def no_value_argv(github):
-    for call in _calls(github):
+def no_value_argv(pubtest_ctx):
+    for call in _calls(pubtest_ctx):
         if call["args"][0] == "variable":
-            assert call["read"] not in " ".join(call["args"])
-
-
-@then("it does not succeed")
-def not_ok(result):
-    assert result.code != 0, result.stdout
-
-
-@then(parsers.parse('it does not print "{text}"'))
-def not_printed(result, text):
-    assert text not in result.stdout, result.stdout
-
-
-@then(parsers.parse('it warns "{text}"'))
-def warns(result, text):
-    assert text in result.stderr, result.stderr
+            assert call["input"] not in " ".join(call["args"])

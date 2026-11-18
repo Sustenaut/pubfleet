@@ -9,7 +9,6 @@ import ast
 import copy
 import json
 import re
-import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -180,10 +179,9 @@ def odd_rules(case, tmp_path, notch):
     case["path"].write_text(json.dumps(rules))
 
 
-@then(parsers.parse('loading them fails with "{text}"'))
-def refused(case, text):
-    with pytest.raises(ValueError, match=text):
-        grading.load(case["path"])
+@when("the rules are loaded")
+def load_rules(ctx, case):
+    ctx.attempt(lambda: grading.load(case["path"]))
 
 
 @when("I grade them", target_fixture="graded")
@@ -403,12 +401,6 @@ def answers(read):
 
 # The command, replaying the recorded build.
 
-@given("the build recording and its repos file in the repository")
-def recorded_build(repo):
-    for name in ("recorded.json", "repos.json"):
-        shutil.copy(FIXTURES / name, repo / name)
-
-
 def _board(repo, path):
     return json.loads((repo / path).read_text())
 
@@ -440,11 +432,6 @@ def private_row(repo, path, name):
     row = next(line for line in html.splitlines() if name in line)  # one line per row
     assert "<span class=tag>private</span>" in row
     assert row.count("class=grade") == 3
-
-
-@then(parsers.parse('"{path}" has a breakdown naming "{label}"'))
-def breakdown(repo, path, label):
-    assert label in (repo / path).read_text()
 
 
 @then(parsers.parse('"{path}" loads no script'))

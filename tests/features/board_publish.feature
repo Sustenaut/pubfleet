@@ -4,7 +4,8 @@ Feature: A board is kept in storage only when something changed
   These run it against a fake storage service.
 
   Background:
-    Given an empty repository
+    Given a scratch directory
+    And the program under test is "pubfleet"
 
   Scenario: The first board is uploaded, and the head's first move says so
     Given storage has no board for "some-tenant"
@@ -62,31 +63,53 @@ Feature: A board is kept in storage only when something changed
 
   Scenario: Nothing printed names a repository or the token
     Given storage has no board for "some-tenant"
+    And the secret "example-org/secretly-named"
+    And the secret "the-oidc-token"
+    And the secret "request"
     When I publish a board to "some-tenant"
-    Then its output names no repository and no token
+    Then it succeeds
+    And no secret appears in what it produced
 
-  Scenario Outline: A state file becomes the repos file for a role
-    Given a state file for "example-org"
-    When I turn it into the repos file for "<role>"
-    Then it lists "<repos>"
+  Scenario: A state file becomes the repos file for the board, each repository with its roles and project
+    Given a file "state.json" holding:
+      """
+      {"owner": "example-org", "repos": {
+        "one": {"project": "tools", "board": true, "protect": true, "govern": false},
+        "two": {"board": true, "protect": false, "govern": true},
+        "three": {"board": false, "protect": false, "govern": true}}}
+      """
+    When I run "pubfleet state --repos-for board"
+    Then it succeeds
+    And it prints the JSON:
+      """
+      {"repositories": [
+        {"repo": "example-org/one", "protect": true, "govern": false, "project": "tools"},
+        {"repo": "example-org/two", "protect": false, "govern": true}]}
+      """
 
-    Examples:
-      | role   | repos                                |
-      | board  | example-org/one, example-org/two     |
-      | govern | example-org/two, example-org/three   |
-
-  Scenario: The repos file keeps each repository's roles and project
-    Given a state file for "example-org"
-    When I turn it into the repos file for "board"
-    Then "example-org/one" has the project "tools", protect on and govern off
-    And "example-org/two" has no project
+  Scenario: A state file becomes the repos file for the nightly, for the repositories it governs
+    Given a file "state.json" holding:
+      """
+      {"owner": "example-org", "repos": {
+        "one": {"project": "tools", "board": true, "protect": true, "govern": false},
+        "two": {"board": true, "protect": false, "govern": true},
+        "three": {"board": false, "protect": false, "govern": true}}}
+      """
+    When I run "pubfleet state --repos-for govern"
+    Then it succeeds
+    And it prints the JSON:
+      """
+      {"repositories": [
+        {"repo": "example-org/two", "protect": false, "govern": true},
+        {"repo": "example-org/three", "protect": false, "govern": true}]}
+      """
 
   Scenario: A state file that is wrong is refused, saying why
-    Given the file "state.json" reads "{"owner": "x"}"
-    When I run pubfleet "state" "--repos-for" "board"
+    Given a file "state.json" holding "{"owner": "x"}"
+    When I run "pubfleet state --repos-for board"
     Then it fails
     And stderr mentions ""repos" must be an object"
 
   Scenario: state takes a check or a role, not both
-    When I run pubfleet "state" "--check" "--repos-for" "board"
+    When I run "pubfleet state --check --repos-for board"
     Then it fails

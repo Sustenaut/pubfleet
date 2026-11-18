@@ -2,11 +2,15 @@ Feature: pubfleet freshness reports which pubrules each repository pins, and whe
   It reads each checkout and changes nothing. The standard is the installed
   pubrules', the one the nightly moves repositories to.
 
+  Background:
+    Given a scratch directory
+    And the program under test is "pubfleet"
+
   Scenario: Repositories pubrules cannot judge say why, as a table and as JSON
-    Given the file "a/README.md" reads "no pubrules.json here"
-    And the file "b/pubrules.json" reads "{"kind": "utility"}"
-    And the file "b/tests/requirements.lock" reads "pubrules @ https://x/download/v0.1.0/pubrules-0.1.0-py3-none-any.whl"
-    When I run pubfleet "freshness" "--json" "a" "b"
+    Given a file "a/README.md" holding "no pubrules.json here"
+    And a file "b/pubrules.json" holding "{"kind": "utility"}"
+    And a file "b/tests/requirements.lock" holding "pubrules @ https://x/download/v0.1.0/pubrules-0.1.0-py3-none-any.whl"
+    When I run "pubfleet freshness --json a b"
     Then it succeeds
     And it prints ""conforms": "no pubrules.json""
     And it prints ""conforms": "not Rust""
@@ -24,8 +28,9 @@ Feature: pubfleet freshness reports which pubrules each repository pins, and whe
     Then it conforms "yes"
 
   Scenario: The table goes to the job summary too, when there is one
-    Given the file "b/pubrules.json" reads "{"kind": "utility"}"
-    And a job summary file
-    When I run pubfleet "freshness" "b"
+    Given a file "b/pubrules.json" holding "{"kind": "utility"}"
+    And the environment sets "GITHUB_STEP_SUMMARY" to "summary.md"
+    When I run "pubfleet freshness b"
     Then it succeeds
-    And the job summary has the table, with "| b | - | **no** | not Rust | - |"
+    And the file "summary.md" includes "| Repository | Pins pubrules |"
+    And the file "summary.md" includes "| b | - | **no** | not Rust | - |"

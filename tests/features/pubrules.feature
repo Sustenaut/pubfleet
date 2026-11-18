@@ -14,6 +14,8 @@ Feature: pubfleet uses pubrules as a library, through the names its README lists
     Then the installed pubrules has each of them
 
   Scenario: pubfleet says its version
-    When I run pubfleet "--version"
+    Given a scratch directory
+    And the program under test is "pubfleet"
+    When I run "pubfleet --version"
     Then it succeeds
     And it prints "pubfleet "

@@ -7,7 +7,8 @@ Feature: The nightly keeps every governed repository current, through a pull req
   each repository moves to that pubrules.
 
   Background:
-    Given an empty repository
+    Given a scratch directory
+    And the program under test is "pubfleet"
 
   Scenario: The nightly workflow updates one pull request and merges nothing
     When I parse the workflow "nightly.yml"
@@ -32,60 +33,164 @@ Feature: The nightly keeps every governed repository current, through a pull req
     And the pubrules it installs is the one that release is tested with, unless the pubrules input names one
 
   Scenario: The nightly takes pubrel's latest release when crates.io has it
-    Given crates.io has pubrel "0.6.1, 0.6.2"
+    Given a fake "crates" service
+    And the "crates" service answers "GET /crates/pubrel/0.6.2" with 200 and:
+      """
+      {"version": {"num": "0.6.2", "yanked": false}}
+      """
     When I ask which pubrel to use for the release "v0.6.2"
-    Then it says "0.6.2", with no warning
+    Then it succeeds
+    And it prints:
+      """
+      0.6.2
+      """
+    And stderr is empty
+    And the "crates" service was asked "GET /crates/pubrel/0.6.2" with the header "User-Agent" set to "pubfleet-nightly (https://github.com/Sustenaut/pubfleet)"
 
   Scenario: A release not yet on crates.io gives way to the newest that is, with a warning
-    Given crates.io has pubrel "0.6.0, 0.6.1"
+    Given a fake "crates" service
+    And the "crates" service answers "GET /crates/pubrel/0.6.2" with 404
+    And the "crates" service answers "GET /crates/pubrel" with 200 and:
+      """
+      {"crate": {"max_stable_version": "0.6.1"}}
+      """
     When I ask which pubrel to use for the release "v0.6.2"
-    Then it says "0.6.1", warning "pubrel 0.6.2 is tagged but not on crates.io"
+    Then it succeeds
+    And it prints:
+      """
+      0.6.1
+      """
+    And stderr mentions "::warning::"
+    And stderr mentions "pubrel 0.6.2 is tagged but not on crates.io"
+    And the "crates" service was asked "GET /crates/pubrel/0.6.2" with the header "User-Agent" set to "pubfleet-nightly (https://github.com/Sustenaut/pubfleet)"
+    And the "crates" service was asked "GET /crates/pubrel" with the header "User-Agent" set to "pubfleet-nightly (https://github.com/Sustenaut/pubfleet)"
 
   Scenario: A yanked release gives way too
-    Given crates.io has pubrel "0.6.1, 0.6.2", with "0.6.2" yanked
+    Given a fake "crates" service
+    And the "crates" service answers "GET /crates/pubrel/0.6.2" with 200 and:
+      """
+      {"version": {"num": "0.6.2", "yanked": true}}
+      """
+    And the "crates" service answers "GET /crates/pubrel" with 200 and:
+      """
+      {"crate": {"max_stable_version": "0.6.1"}}
+      """
     When I ask which pubrel to use for the release "v0.6.2"
-    Then it says "0.6.1", warning "not on crates.io"
+    Then it succeeds
+    And it prints:
+      """
+      0.6.1
+      """
+    And stderr mentions "::warning::"
+    And stderr mentions "not on crates.io"
 
   Scenario: Without crates.io it tries the latest release, saying so
-    Given crates.io doesn't answer
+    Given a fake "crates" service
+    And the "crates" service answers "GET /crates/pubrel/0.6.2" with 503
+    And the "crates" service answers "GET /crates/pubrel" with 503
     When I ask which pubrel to use for the release "v0.6.2"
-    Then it says "0.6.2", warning "crates.io didn't answer"
+    Then it succeeds
+    And it prints:
+      """
+      0.6.2
+      """
+    And stderr mentions "::warning::"
+    And stderr mentions "crates.io didn't answer"
 
   Scenario: The nightly asks crates.io before installing pubrel
     When I parse the workflow "nightly.yml"
     Then it chooses pubrel with pubrel-version.sh, and installs that version
 
   Scenario: The nightly installs the pubrules its pubfleet release's lock pins, by hash
-    When the nightly installs pubfleet "v0.1.0"
-    Then it installs the lock "tests/requirements.lock" with --require-hashes, wheels only
-    And it installs pubfleet's wheel "v0.1.0/pubfleet-0.1.0-py3-none-any.whl" without dependencies
-    And it installs no other pubrules
+    Given a stand-in "python"
+    And a stand-in "pubfleet"
+    And a stand-in "pubrules"
+    And the environment does not set "PUBRULES_TAG"
+    And a file ".github/nightly/install.sh" copied from ".github/nightly/install.sh"
+    And the file ".github/nightly/install.sh" is executable
+    When I run ".github/nightly/install.sh v0.1.0"
+    Then it succeeds
+    And "python" was run, in turn, with arguments matching:
+      """
+      -m pip install --quiet --only-binary :all: --require-hashes -r */scratch/tests/requirements.lock
+      -m pip install --quiet --no-deps https://github.com/Sustenaut/pubfleet/releases/download/v0.1.0/pubfleet-0.1.0-py3-none-any.whl
+      """
+    And it does not print "::warning::"
 
   Scenario: The pubrules input moves the repositories to that pubrules instead, with a warning
-    When the nightly installs pubfleet "v0.1.0" with the pubrules input "v0.33.1"
-    Then it installs pubrules' wheel "v0.33.1/pubrules-0.33.1-py3-none-any.whl" after the lock
-    And the install warns "governed repositories move to pubrules v0.33.1"
+    Given a stand-in "python"
+    And a stand-in "pubfleet"
+    And a stand-in "pubrules"
+    And the environment sets "PUBRULES_TAG" to "v0.33.1"
+    And a file ".github/nightly/install.sh" copied from ".github/nightly/install.sh"
+    And the file ".github/nightly/install.sh" is executable
+    When I run ".github/nightly/install.sh v0.1.0"
+    Then it succeeds
+    And "python" was run, in turn, with arguments matching:
+      """
+      -m pip install --quiet --only-binary :all: --require-hashes -r */scratch/tests/requirements.lock
+      -m pip install --quiet --no-deps https://github.com/Sustenaut/pubfleet/releases/download/v0.1.0/pubfleet-0.1.0-py3-none-any.whl
+      -m pip install --quiet --no-deps https://github.com/Sustenaut/pubrules/releases/download/v0.33.1/pubrules-0.33.1-py3-none-any.whl
+      """
+    And it prints "::warning::"
+    And it prints "governed repositories move to pubrules v0.33.1"
 
   Scenario: A pubrules input that is not a release tag is refused
-    When the nightly installs pubfleet "v0.1.0" with the pubrules input "main"
-    Then the install fails, saying "must be a release tag"
+    Given a stand-in "python"
+    And a stand-in "pubfleet"
+    And a stand-in "pubrules"
+    And the environment sets "PUBRULES_TAG" to "main"
+    And a file ".github/nightly/install.sh" copied from ".github/nightly/install.sh"
+    And the file ".github/nightly/install.sh" is executable
+    When I run ".github/nightly/install.sh v0.1.0"
+    Then it fails
+    And stderr mentions "must be a release tag"
+    And "python" was run, in turn, with arguments matching:
+      """
+      -m pip install --quiet --only-binary :all: --require-hashes -r */scratch/tests/requirements.lock
+      -m pip install --quiet --no-deps https://github.com/Sustenaut/pubfleet/releases/download/v0.1.0/pubfleet-0.1.0-py3-none-any.whl
+      """
 
   Scenario: The nightly never moves a repository to an older pubrules
-    Given a repository that pins pubrules "0.35.0"
-    When the backwards guard runs with pubrules "0.33.0" installed
-    Then the guard stops, saying "it runs pubrules 0.35.0, newer than tonight's 0.33.0: not moved back"
+    Given a file "pubrules" holding:
+      """
+      #!/usr/bin/env bash
+      # Managed by pubrules 0.35.0: `pubrules sync` rewrites this file
+      """
+    And a stand-in "pubrules" that prints "pubrules 0.33.0"
+    And a file "not-backwards.sh" copied from ".github/nightly/not-backwards.sh"
+    And the file "not-backwards.sh" is executable
+    When I run "./not-backwards.sh"
+    Then the exit code is 1
+    And it prints:
+      """
+      it runs pubrules 0.35.0, newer than tonight's 0.33.0: not moved back
+      """
 
   Scenario Outline: The same or a newer pubrules goes on
-    Given a repository that pins pubrules "<pinned>"
-    When the backwards guard runs with pubrules "<installed>" installed
-    Then the guard lets the nightly go on
+    Given a file "pubrules" holding:
+      """
+      #!/usr/bin/env bash
+      # Managed by pubrules <pinned>: `pubrules sync` rewrites this file
+      """
+    And a stand-in "pubrules" that prints "pubrules <installed>"
+    And a file "not-backwards.sh" copied from ".github/nightly/not-backwards.sh"
+    And the file "not-backwards.sh" is executable
+    When I run "./not-backwards.sh"
+    Then it succeeds
 
     Examples:
       | pinned | installed |
       | 0.33.0 | 0.36.0    |
       | 0.36.0 | 0.36.0    |
       | 0.9.9  | 0.10.0    |
-      | none   | 0.33.0    |
+
+  Scenario: A repository that pins no pubrules goes on
+    Given a stand-in "pubrules" that prints "pubrules 0.33.0"
+    And a file "not-backwards.sh" copied from ".github/nightly/not-backwards.sh"
+    And the file "not-backwards.sh" is executable
+    When I run "./not-backwards.sh"
+    Then it succeeds
 
   Scenario: The update script checks before it moves anything
     When I read the nightly's update script

@@ -3,12 +3,16 @@ Feature: pubfleet variables keeps repositories' GitHub variables to a state file
   state file gives their values, strings or JSON. --check prints how GitHub differs and
   fails; --apply sets what differs and runs the repository's deploy workflow once.
 
+  Background:
+    Given a scratch directory
+    And the program under test is "pubfleet"
+
   Scenario: Variables GitHub holds as the state gives them pass, however their JSON is spaced
     Given "example-org/one" declares "SOME_MAP" and "SOME_URL", deploying with "deploy.yml"
     And the state gives "one" the variables "{"SOME_MAP": {"a": "x", "b": "y"}, "SOME_URL": "https://example.com"}"
     And GitHub holds "SOME_MAP" in "example-org/one" as "{ "b": "y",  "a": "x" }"
     And GitHub holds "SOME_URL" in "example-org/one" as "https://example.com"
-    When I run pubfleet "variables" "--check"
+    When I run "pubfleet variables --check"
     Then it succeeds
     And it prints "example-org/one: 2 variables as the state says"
 
@@ -17,8 +21,8 @@ Feature: pubfleet variables keeps repositories' GitHub variables to a state file
     And the state gives "one" the variables "{"SOME_MAP": {"a": "x", "b": "z"}, "SOME_URL": "https://example.com"}"
     And GitHub holds "SOME_MAP" in "example-org/one" as "{"a":"x","b":"y"}"
     And GitHub holds "SOME_URL" in "example-org/one" as "https://example.com"
-    When I run pubfleet "variables" "--check"
-    Then it does not succeed
+    When I run "pubfleet variables --check"
+    Then it fails
     And it prints "example-org/one: 1 of 2 variables differ from the state"
     And it prints "-  "b": "y""
     And it prints "+  "b": "z""
@@ -30,7 +34,7 @@ Feature: pubfleet variables keeps repositories' GitHub variables to a state file
     And the state gives "one" the variables "{"SOME_MAP": {"b": "z", "a": "x"}, "SOME_URL": "https://new.example.com"}"
     And GitHub holds "SOME_MAP" in "example-org/one" as "{"a":"x","b":"y"}"
     And GitHub holds "SOME_URL" in "example-org/one" as "https://example.com"
-    When I run pubfleet "variables" "--apply"
+    When I run "pubfleet variables --apply"
     Then it succeeds
     And GitHub holds "SOME_MAP" in "example-org/one" as "{"b":"z","a":"x"}" now
     And GitHub holds "SOME_URL" in "example-org/one" as "https://new.example.com" now
@@ -41,24 +45,24 @@ Feature: pubfleet variables keeps repositories' GitHub variables to a state file
     Given "example-org/one" declares "SOME_URL" and "SOME_MAP", deploying with "deploy.yml"
     And the state gives "one" the variables "{"SOME_URL": "https://example.com"}"
     And GitHub holds "SOME_URL" in "example-org/one" as "https://example.com"
-    When I run pubfleet "variables" "--apply"
+    When I run "pubfleet variables --apply"
     Then it succeeds
     And nothing was set or run
 
   Scenario: A variable GitHub doesn't hold yet is set
     Given "example-org/one" declares "SOME_URL" and "SOME_MAP", without a deploy workflow
     And the state gives "one" the variables "{"SOME_URL": "https://example.com"}"
-    When I run pubfleet "variables" "--check"
-    Then it does not succeed
+    When I run "pubfleet variables --check"
+    Then it fails
     And it prints "SOME_URL is not set; the state has:"
-    When I run pubfleet "variables" "--apply"
+    When I run "pubfleet variables --apply"
     Then it succeeds
     And GitHub holds "SOME_URL" in "example-org/one" as "https://example.com" now
 
   Scenario: A variable its pubrules.json doesn't declare is never set
     Given "example-org/one" declares "SOME_URL" and "SOME_MAP", deploying with "deploy.yml"
     And the state gives "one" the variables "{"OTHER": "x"}"
-    When I run pubfleet "variables" "--apply"
+    When I run "pubfleet variables --apply"
     Then the exit code is 1
     And it prints "example-org/one: its pubrules.json doesn't declare OTHER"
     And nothing was set or run
@@ -67,56 +71,56 @@ Feature: pubfleet variables keeps repositories' GitHub variables to a state file
     Given "example-org/one" declares "SOME_URL" and "SOME_MAP", deploying with "deploy.yml"
     And the state gives "one" the variables "{"SOME_URL": "https://example.com"}"
     And GitHub holds "SOME_URL" in "example-org/one" as "https://example.com"
-    When I run pubfleet "variables" "--check"
+    When I run "pubfleet variables --check"
     Then it succeeds
     And it does not print "example-org/two"
-    When I run pubfleet "variables" "--check" "two"
+    When I run "pubfleet variables --check two"
     Then the exit code is 1
-    And it warns "the state gives two no variables"
+    And stderr mentions "the state gives two no variables"
 
   Scenario: A repository named in another owner is refused
     Given "example-org/one" declares "SOME_URL" and "SOME_MAP", deploying with "deploy.yml"
     And the state gives "one" the variables "{"SOME_URL": "https://example.com"}"
-    When I run pubfleet "variables" "--check" "other-org/one"
+    When I run "pubfleet variables --check other-org/one"
     Then the exit code is 1
-    And it warns "other-org/one is not one of example-org's"
+    And stderr mentions "other-org/one is not one of example-org's"
 
   Scenario: Variables that can't be read fail, and say so
     Given "example-org/one" declares "SOME_URL" and "SOME_MAP", deploying with "deploy.yml"
     And the state gives "one" the variables "{"SOME_URL": "https://example.com"}"
     And GitHub refuses to show the variables of "example-org/one"
-    When I run pubfleet "variables" "--check"
+    When I run "pubfleet variables --check"
     Then the exit code is 1
     And it prints "example-org/one: its variables can't be read"
 
   Scenario: variables takes --check or --apply
-    When I run pubfleet "variables"
+    When I run "pubfleet variables"
     Then the exit code is 2
 
   Scenario: The state check passes variables the repository declares
     Given "example-org/one" declares "SOME_URL" and "SOME_MAP", deploying with "deploy.yml"
     And the state gives "one" the variables "{"SOME_URL": "https://example.com", "SOME_MAP": {"a": 1}}"
-    When I run pubfleet "state" "--check"
+    When I run "pubfleet state --check"
     Then it succeeds
 
   Scenario: The state check refuses a variable the repository doesn't declare
     Given "example-org/one" declares "SOME_URL" and "SOME_MAP", deploying with "deploy.yml"
     And the state gives "one" the variables "{"SOME_URL": "https://example.com", "OTHER": "x"}"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/one: its pubrules.json doesn't declare OTHER, which the state gives it"
 
   Scenario: The state check refuses variables for a repository that declares none
     Given "example-org/one" has the pubrules.json "{"kind": "utility"}"
     And the state gives "one" the variables "{"SOME_URL": "https://example.com"}"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/one has variables in the state, but its pubrules.json declares no variables"
 
   Scenario Outline: Variables of the wrong shape are refused, without asking GitHub
     Given the state gives "one" the variables "<variables>"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "<message>"
 
     Examples:

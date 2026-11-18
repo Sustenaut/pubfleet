@@ -1,5 +1,6 @@
-"""Steps for `pubfleet board-publish`, with a fake storage service in this process, and for
-the repos file `pubfleet state --repos-for` makes from a state file."""
+"""Steps for `pubfleet board-publish`, with a fake storage service in this process: it
+answers a board with its ETag, names each upload by its hash and checks the job's token,
+which pubtest's fake services do not."""
 
 from __future__ import annotations
 
@@ -9,9 +10,8 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
+from pubtest.steps.programs import run_command
 from pytest_bdd import given, parsers, scenarios, then, when
-
-from conftest import pubfleet
 
 scenarios("board_publish.feature")
 
@@ -102,13 +102,17 @@ def storage(fake):
     server.shutdown()
 
 
-def _publish(repo, run, storage, tenant, content, job=True):
+def _publish(pubtest_ctx, monkeypatch, storage, tenant, content, job=True):
     if content is not None:
-        (repo / "site").mkdir(exist_ok=True)
-        (repo / "site" / "board.json").write_bytes(content)
-    variables = {"ACTIONS_ID_TOKEN_REQUEST_URL": f"{storage}/oidc?x=1",
-                 "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "request"} if job else {}
-    return run(pubfleet(), "board-publish", "--url", storage, "--tenant", tenant, cwd=repo, env=variables)
+        (pubtest_ctx.directory / "site").mkdir(exist_ok=True)
+        (pubtest_ctx.directory / "site" / "board.json").write_bytes(content)
+    if job:
+        monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_URL", f"{storage}/oidc?x=1")
+        monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "request")
+    else:
+        monkeypatch.delenv("ACTIONS_ID_TOKEN_REQUEST_URL", raising=False)
+        monkeypatch.delenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", raising=False)
+    run_command(pubtest_ctx, f"pubfleet board-publish --url {storage} --tenant {tenant}", None)
 
 
 @given(parsers.parse('storage has no board for "{tenant}"'))
@@ -131,25 +135,24 @@ def refuses(fake, status):
     fake.refuse_read = status
 
 
-@when(parsers.re(r'I publish a board to "(?P<tenant>[^"]+)"$'), target_fixture="result")
-def publish(repo, run, storage, tenant):
-    return _publish(repo, run, storage, tenant, board())
+@when(parsers.re(r'I publish a board to "(?P<tenant>[^"]+)"$'))
+def publish(pubtest_ctx, monkeypatch, storage, tenant):
+    _publish(pubtest_ctx, monkeypatch, storage, tenant, board())
 
 
-@when(parsers.parse('I publish a board to "{tenant}" with the grade "{grade}", read later'),
-      target_fixture="result")
-def publish_later(repo, run, storage, tenant, grade):
-    return _publish(repo, run, storage, tenant, board(grade, "2026-10-30T11:00:00Z"))
+@when(parsers.parse('I publish a board to "{tenant}" with the grade "{grade}", read later'))
+def publish_later(pubtest_ctx, monkeypatch, storage, tenant, grade):
+    _publish(pubtest_ctx, monkeypatch, storage, tenant, board(grade, "2026-10-30T11:00:00Z"))
 
 
-@when(parsers.parse('I publish a board to "{tenant}" outside a job'), target_fixture="result")
-def publish_outside(repo, run, storage, tenant):
-    return _publish(repo, run, storage, tenant, board(), job=False)
+@when(parsers.parse('I publish a board to "{tenant}" outside a job'))
+def publish_outside(pubtest_ctx, monkeypatch, storage, tenant):
+    _publish(pubtest_ctx, monkeypatch, storage, tenant, board(), job=False)
 
 
-@when(parsers.parse('I publish a missing board to "{tenant}"'), target_fixture="result")
-def publish_missing(repo, run, storage, tenant):
-    return _publish(repo, run, storage, tenant, None)
+@when(parsers.parse('I publish a missing board to "{tenant}"'))
+def publish_missing(pubtest_ctx, monkeypatch, storage, tenant):
+    _publish(pubtest_ctx, monkeypatch, storage, tenant, None)
 
 
 @then(parsers.re(r'it uploaded (?P<count>\d+) files? to "(?P<tenant>[^"]+)"'))
@@ -176,41 +179,3 @@ def no_move(fake):
 @then("it signed in with the job's token for storage's host name")
 def signed_in(fake):
     assert fake.logins == ["/oidc?x=1&audience=127.0.0.1"]
-
-
-@then("its output names no repository and no token")
-def quiet(result):
-    for text in (REPO, TOKEN, "request"):
-        assert text not in result.stdout + result.stderr
-
-
-@given(parsers.parse('a state file for "{owner}"'), target_fixture="state")
-def state_file(owner):
-    return {"owner": owner, "repos": {
-        "one": {"project": "tools", "board": True, "protect": True, "govern": False},
-        "two": {"board": True, "protect": False, "govern": True},
-        "three": {"board": False, "protect": False, "govern": True}}}
-
-
-@when(parsers.parse('I turn it into the repos file for "{role}"'), target_fixture="repos")
-def turn(repo, run, state, role):
-    (repo / "state.json").write_text(json.dumps(state))
-    out = run(pubfleet(), "state", "--repos-for", role, cwd=repo)
-    assert out.code == 0, out.stderr
-    return json.loads(out.stdout)["repositories"]
-
-
-@then(parsers.parse('it lists "{names}"'))
-def lists(repos, names):
-    assert [r["repo"] for r in repos] == names.split(", ")
-
-
-@then(parsers.parse('"{repo}" has the project "{project}", protect on and govern off'))
-def has_project(repos, repo, project):
-    assert next(r for r in repos if r["repo"] == repo) == {
-        "repo": repo, "protect": True, "govern": False, "project": project}
-
-
-@then(parsers.parse('"{repo}" has no project'))
-def no_project(repos, repo):
-    assert "project" not in next(r for r in repos if r["repo"] == repo)
