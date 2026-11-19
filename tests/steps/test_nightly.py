@@ -4,15 +4,13 @@ install.sh and pubrel-version.sh, which choose what it installs."""
 
 from __future__ import annotations
 
-import json
 import os
 import re
-import subprocess
 from pathlib import Path
 
 import yaml
-import pytest
-from pytest_bdd import given, parsers, scenarios, then, when
+from pubtest.steps.programs import run_command
+from pytest_bdd import parsers, scenarios, then, when
 
 
 scenarios("nightly.feature")
@@ -145,75 +143,12 @@ def pubrules_input(workflow):
         if "pubrules-" in s.get("run", ""))
 
 
-# Which pubrel the nightly takes, against a crates.io answered here.
+# Which pubrel the nightly takes, against pubtest's fake "crates" service.
 
-@pytest.fixture
-def crates():
-    """What the fake crates.io has: version -> yanked; None when it doesn't answer."""
-    return {"versions": {}}
-
-
-@given(parsers.re(r'crates\.io has pubrel "(?P<versions>[^"]+)"(?:, with "(?P<yanked>[^"]+)" yanked)?$'))
-def crates_has(crates, versions, yanked):
-    crates["versions"] = {v: v == yanked for v in versions.split(", ")}
-
-
-@given("crates.io doesn't answer")
-def crates_down(crates):
-    crates["versions"] = None
-
-
-@when(parsers.parse('I ask which pubrel to use for the release "{tag}"'), target_fixture="asked")
-def ask_pubrel(crates, tag):
-    import threading
-    from http.server import BaseHTTPRequestHandler, HTTPServer
-
-    held = crates["versions"]
-
-    class Handler(BaseHTTPRequestHandler):
-        def log_message(self, *_):
-            pass
-
-        def do_GET(self):
-            assert "pubfleet-nightly" in self.headers["User-Agent"]
-            if held is None:
-                self.send_response(503)
-                self.end_headers()
-                return
-            path = self.path.removeprefix("/crates/pubrel")
-            if path == "":
-                stable = [v for v, yanked in held.items() if not yanked]
-                body = {"crate": {"max_stable_version": max(stable, key=lambda v: tuple(map(int, v.split("."))))}}
-            elif path[1:] in held:
-                body = {"version": {"num": path[1:], "yanked": held[path[1:]]}}
-            else:
-                self.send_response(404)
-                self.end_headers()
-                return
-            data = json.dumps(body).encode()
-            self.send_response(200)
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
-
-    server = HTTPServer(("127.0.0.1", 0), Handler)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    try:
-        return subprocess.run([str(GITHUB / "nightly" / "pubrel-version.sh"), tag], capture_output=True,
-                              text=True, check=False, timeout=30,
-                              env={**os.environ, "CRATES_API": f"http://127.0.0.1:{server.server_port}"})
-    finally:
-        server.shutdown()
-
-
-@then(parsers.re(r'it says "(?P<version>[^"]+)", (?:with no warning|warning "(?P<warning>[^"]+)")$'))
-def says(asked, version, warning):
-    assert asked.returncode == 0, asked.stderr
-    assert asked.stdout.strip() == version
-    if warning:
-        assert warning in asked.stderr and "::warning::" in asked.stderr
-    else:
-        assert asked.stderr == ""
+@when(parsers.parse('I ask which pubrel to use for the release "{tag}"'))
+def ask_pubrel(pubtest_ctx, monkeypatch, tag):
+    monkeypatch.setenv("CRATES_API", os.environ["CRATES_URL"])
+    run_command(pubtest_ctx, f"{GITHUB / 'nightly' / 'pubrel-version.sh'} {tag}", None)
 
 
 @then("it chooses pubrel with pubrel-version.sh, and installs that version")
@@ -223,111 +158,6 @@ def chooses(workflow):
     assert 'pubrel=$(pubfleet/.github/nightly/pubrel-version.sh "$(latest Sustenaut/pubrel)")' in latest["run"]
     install = next(s for s in steps if "cargo install --locked pubrel" in s.get("run", ""))
     assert install["env"]["PUBREL"] == "${{ steps.latest.outputs.pubrel }}"
-
-
-# What install.sh installs, with python, pubfleet and pubrules stood in for.
-
-FAKE = """#!/usr/bin/env bash
-printf '%s\\n' "$*" >> "$CALLS"
-"""
-
-
-@when(parsers.re(r'the nightly installs pubfleet "(?P<tag>[^"]+)"(?: with the pubrules input "(?P<pubrules>[^"]+)")?$'),
-      target_fixture="installed")
-def install(tmp_path, tag, pubrules):
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    for name in ("python", "pubfleet", "pubrules"):
-        (bin_dir / name).write_text(FAKE)
-        (bin_dir / name).chmod(0o755)
-    calls = tmp_path / "calls"
-    env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "CALLS": str(calls)}
-    env.pop("PUBRULES_TAG", None)
-    if pubrules:
-        env["PUBRULES_TAG"] = pubrules
-    done = subprocess.run([str(GITHUB / "nightly" / "install.sh"), tag], capture_output=True, text=True,
-                          env=env, check=False, timeout=30)
-    lines = calls.read_text().splitlines() if calls.is_file() else []
-    return {"done": done, "pip": [line for line in lines if line.startswith("-m pip install")]}
-
-
-@then(parsers.parse('it installs the lock "{lock}" with --require-hashes, wheels only'))
-def installs_lock(installed, lock):
-    assert installed["done"].returncode == 0, installed["done"].stderr
-    first = installed["pip"][0]
-    assert "--require-hashes" in first and "--only-binary :all:" in first
-    assert first.endswith(f"-r {GITHUB.parent / lock}")
-
-
-@then(parsers.parse('it installs pubfleet\'s wheel "{wheel}" without dependencies'))
-def installs_pubfleet(installed, wheel):
-    assert installed["pip"][1].endswith(
-        f"--no-deps https://github.com/Sustenaut/pubfleet/releases/download/{wheel}")
-
-
-@then("it installs no other pubrules")
-def no_other_pubrules(installed):
-    assert len(installed["pip"]) == 2
-    assert "::warning::" not in installed["done"].stdout
-
-
-@then(parsers.parse('it installs pubrules\' wheel "{wheel}" after the lock'))
-def installs_pubrules(installed, wheel):
-    assert installed["done"].returncode == 0, installed["done"].stderr
-    assert len(installed["pip"]) == 3
-    assert installed["pip"][2].endswith(
-        f"--no-deps https://github.com/Sustenaut/pubrules/releases/download/{wheel}")
-
-
-@then(parsers.parse('the install warns "{text}"'))
-def install_warns(installed, text):
-    assert "::warning::" in installed["done"].stdout and text in installed["done"].stdout
-
-
-@then(parsers.parse('the install fails, saying "{text}"'))
-def install_fails(installed, text):
-    assert installed["done"].returncode != 0
-    assert text in installed["done"].stderr
-    assert len(installed["pip"]) == 2
-
-
-GUARD = GITHUB / "nightly" / "not-backwards.sh"
-
-
-def _guard(tmp_path, pinned, installed):
-    import os
-    import subprocess
-    repo, bin_dir = tmp_path / "guarded", tmp_path / "guard-bin"
-    repo.mkdir()
-    bin_dir.mkdir()
-    if pinned:
-        (repo / "pubrules").write_text(f"#!/usr/bin/env bash\n# Managed by pubrules {pinned}: `pubrules sync` rewrites this file\n")
-    fake = bin_dir / "pubrules"
-    fake.write_text(f"#!/bin/sh\necho pubrules {installed}\n")
-    fake.chmod(0o755)
-    env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
-    return subprocess.run([str(GUARD), str(repo)], env=env, capture_output=True, text=True, check=False)
-
-
-@given(parsers.parse('a repository that pins pubrules "{pinned}"'), target_fixture="pinned")
-def pins_pubrules(pinned):
-    return None if pinned == "none" else pinned
-
-
-@when(parsers.parse('the backwards guard runs with pubrules "{installed}" installed'), target_fixture="guarded")
-def guard_runs(tmp_path, pinned, installed):
-    return _guard(tmp_path, pinned, installed)
-
-
-@then(parsers.parse('the guard stops, saying "{text}"'))
-def guard_stops(guarded, text):
-    assert guarded.returncode == 1
-    assert guarded.stdout.strip() == text
-
-
-@then("the guard lets the nightly go on")
-def guard_goes_on(guarded):
-    assert guarded.returncode == 0, guarded.stdout + guarded.stderr
 
 
 @when("I read the nightly's update script", target_fixture="script")

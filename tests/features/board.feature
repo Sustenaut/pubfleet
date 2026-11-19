@@ -7,6 +7,10 @@ Feature: The board grades every listed repository A to E
   against recorded responses, and the command on a recording of a whole
   build.
 
+  Background:
+    Given a scratch directory
+    And the program under test is "pubfleet"
+
   Scenario: A repository with nothing wrong grades A
     Given the facts of a package with nothing wrong
     When I grade them
@@ -149,7 +153,9 @@ Feature: The board grades every listed repository A to E
 
   Scenario: Rules naming a notch pubfleet does not have are refused
     Given rules with a delivery notch "coffee"
-    Then loading them fails with "no delivery notch coffee"
+    When the rules are loaded
+    Then it is refused, saying "no delivery notch coffee"
+    And the refusal is a "ValueError"
 
   Scenario: Rows sort worst first
     Given graded rows "a/one" "B" with 1 notch, "a/two" "E" with 6 notches, "a/three" "B" with 3 notches
@@ -197,14 +203,15 @@ Feature: The board grades every listed repository A to E
     Then the first answers 200 and the second does not answer
 
   Scenario: pubfleet board writes board.json and index.html from a recorded build
-    Given the build recording and its repos file in the repository
-    When I run pubfleet "board" "--out" "site" "--replay" "recorded.json" "--repos" "repos.json"
+    Given a file "recorded.json" copied from "tests/fixtures/board/recorded.json"
+    And a file "repos.json" copied from "tests/fixtures/board/repos.json"
+    When I run "pubfleet board --out site --replay recorded.json --repos repos.json"
     Then it succeeds
     And it prints "3 repos:"
     And "site/board.json" lists the repositories worst first
     And every fact and notch in "site/board.json" names calls that board.json records
     And "site/index.html" shows "example-org/private-thing" as private, with its grades
-    And "site/index.html" has a breakdown naming "github · open_issues"
+    And the file "site/index.html" includes "github · open_issues"
     And "site/index.html" loads no script
 
   Scenario: What --record keeps, --replay builds the same board from

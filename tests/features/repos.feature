@@ -2,11 +2,15 @@ Feature: A state file says which repositories an owner has, and a repos file whi
   How a repository is protected stays in its own pubrules.json. `pubfleet state
   --check` is a state repository's fast check.
 
+  Background:
+    Given a scratch directory
+    And the program under test is "pubfleet"
+
   Scenario: The board grades what the repos file names, by each one's roles
     Given the build recording, and a repos file with projects
-    When I run pubfleet "board" "--out" "site" "--replay" "recorded.json" "--repos" "repos.json"
+    When I run "pubfleet board --out site --replay recorded.json --repos repos.json"
     Then it succeeds
-    And it warns of nothing
+    And stderr is empty
     And "site/board.json" lists "example-org/pubthing" in the project "pub"
     And "site/board.json" says "example-org/site-thing" has no protection to differ
     And "site/board.json" says "example-org/pubthing" is governed
@@ -14,14 +18,14 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And "site/index.html" shows "example-org/pubthing" in the project "pub"
 
   Scenario: A repos file the board can't read is reported
-    Given the file "repos.json" reads "nonsense"
-    When I run pubfleet "board" "--out" "site" "--replay" "repos.json" "--repos" "repos.json"
-    Then it does not succeed
+    Given a file "repos.json" holding "nonsense"
+    When I run "pubfleet board --out site --replay repos.json --repos repos.json"
+    Then it fails
 
   Scenario: pubfleet freshness reports what the file governs, checked out or not
-    Given the file "repos.json" reads "{"repositories": [{"repo": "o/here", "govern": true}, {"repo": "o/gone", "govern": true}, {"repo": "o/other"}]}"
-    And the file "here/tests/requirements.lock" reads "pubrules @ https://x/download/v0.1.0/pubrules-0.1.0-py3-none-any.whl"
-    When I run pubfleet "freshness" "--repos" "repos.json" "."
+    Given a file "repos.json" holding "{"repositories": [{"repo": "o/here", "govern": true}, {"repo": "o/gone", "govern": true}, {"repo": "o/other"}]}"
+    And a file "here/tests/requirements.lock" holding "pubrules @ https://x/download/v0.1.0/pubrules-0.1.0-py3-none-any.whl"
+    When I run "pubfleet freshness --repos repos.json ."
     Then it succeeds
     And it prints "| here | 0.1.0 |"
     And it prints "| gone | - |"
@@ -29,15 +33,15 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And it does not print "other"
 
   Scenario: pubfleet freshness needs something to report on
-    When I run pubfleet "freshness"
-    Then it does not succeed
-    And it warns "name the checkouts, or pass --repos FILE"
+    When I run "pubfleet freshness"
+    Then it fails
+    And stderr mentions "name the checkouts, or pass --repos FILE"
 
   Scenario: --repos takes one directory
-    Given the file "repos.json" reads "{"repositories": []}"
-    When I run pubfleet "freshness" "--repos" "repos.json" "a" "b"
-    Then it does not succeed
-    And it warns "--repos takes one directory"
+    Given a file "repos.json" holding "{"repositories": []}"
+    When I run "pubfleet freshness --repos repos.json a b"
+    Then it fails
+    And stderr mentions "--repos takes one directory"
 
   Scenario: board.yml takes the repos file as an input
     When I parse the workflow "board.yml"
@@ -47,23 +51,23 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     Given the state of "example-org" has "one" with protect on and "two" with protect off
     And "example-org/one" has a protect block requiring "ci / passed"
     And "example-org/two" exists
-    When I run pubfleet "state" "--check"
+    When I run "pubfleet state --check"
     Then it succeeds
     And it prints "2 repositories of example-org, all sound"
 
   Scenario: A state file names a repository that isn't there
     Given the state of "example-org" has "one" with protect off and "two" with protect off
     And "example-org/one" exists
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/two does not exist"
 
   Scenario: A state file names a repository that has moved
     Given the state of "example-org" has "one" with protect off and "two" with protect off
     And "example-org/one" exists
     And "example-org/two" is now "other-org/two"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/two is now other-org/two"
 
   Scenario: A repository to protect needs a protect block
@@ -71,33 +75,33 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And "example-org/one" exists
     And "example-org/one" has the pubrules.json "{"kind": "utility"}"
     And "example-org/two" exists
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/one has "protect" on, but its pubrules.json has no protect block"
 
   Scenario: A repository with deploy on needs a deploy block
-    Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}, "two": {"board": true, "protect": false, "govern": false, "deploy": true}}}"
+    Given a file "state.json" holding "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}, "two": {"board": true, "protect": false, "govern": false, "deploy": true}}}"
     And "example-org/one" has the pubrules.json "{"kind": "service", "deploy": {"namespace": "one"}}"
     And "example-org/two" has the pubrules.json "{"kind": "service"}"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/two has "deploy" on, but its pubrules.json has no deploy block"
     And it does not print "example-org/one has"
 
   Scenario: A repository with deploy on and no pubrules.json says so
-    Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}}}"
+    Given a file "state.json" holding "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}}}"
     And "example-org/one" exists
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/one has "deploy" on, but no pubrules.json on its default branch"
 
   Scenario: The repository the check runs in is read from its own checkout
     Given the state of "example-org" has "state" with protect on and "two" with protect off
     And "example-org/state" exists
     And "example-org/two" exists
-    And the file "pubrules.json" reads "{"kind": "content", "protect": {"checks": ["state / valid"]}}"
+    And a file "pubrules.json" holding "{"kind": "content", "protect": {"checks": ["state / valid"]}}"
     And the environment sets "GITHUB_REPOSITORY" to "example-org/state"
-    When I run pubfleet "state" "--check"
+    When I run "pubfleet state --check"
     Then it succeeds
     And it prints "2 repositories of example-org, all sound"
 
@@ -105,10 +109,10 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     Given the state of "example-org" has "state" with protect off and "two" with protect on
     And "example-org/state" exists
     And "example-org/two" exists
-    And the file "pubrules.json" reads "{"kind": "content", "protect": {"checks": ["state / valid"]}}"
+    And a file "pubrules.json" holding "{"kind": "content", "protect": {"checks": ["state / valid"]}}"
     And the environment sets "GITHUB_REPOSITORY" to "example-org/state"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/two has "protect" on, but no pubrules.json on its default branch"
 
   Scenario: Without a pubrules.json beside the state file, GitHub's copy is read
@@ -116,13 +120,13 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And "example-org/state" exists
     And "example-org/two" exists
     And the environment sets "GITHUB_REPOSITORY" to "example-org/state"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/state has "protect" on, but no pubrules.json on its default branch"
 
   Scenario: The repos file for deploy lists the repositories the convergence engine walks
-    Given the file "state.json" reads "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}, "two": {"board": true, "protect": false, "govern": false}}}"
-    When I run pubfleet "state" "--repos-for" "deploy"
+    Given a file "state.json" holding "{"owner": "example-org", "repos": {"one": {"board": true, "protect": false, "govern": false, "deploy": true}, "two": {"board": true, "protect": false, "govern": false}}}"
+    When I run "pubfleet state --repos-for deploy"
     Then it succeeds
     And it prints "example-org/one"
     And it does not print "example-org/two"
@@ -131,22 +135,22 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     Given the state of "example-org" has "one" with protect off and "two" with protect off
     And "example-org/one" exists
     And GitHub refuses "example-org/two"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/two: gh api"
 
   Scenario: A state file may name a different path
-    Given the file "other.json" reads "{"owner": "example-org", "repos": {}}"
-    When I run pubfleet "state" "--check" "other.json"
+    Given a file "other.json" holding "{"owner": "example-org", "repos": {}}"
+    When I run "pubfleet state --check other.json"
     Then it succeeds
     And it prints "0 repositories of example-org"
 
   Scenario Outline: A state file of the wrong shape is refused, without asking GitHub
-    Given the file "state.json" reads "<text>"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    Given a file "state.json" holding "<text>"
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "<message>"
-    And GitHub was asked nothing
+    And "gh" was not run
 
     Examples:
       | text                                                                                           | message                          |
@@ -164,21 +168,21 @@ Feature: A state file says which repositories an owner has, and a repos file whi
       | {"owner": "o", "repos": {"a": {"board": true, "protect": true, "govern": true, "deploy": 1}}}  | "deploy" must be true or false   |
 
   Scenario: A state file that can't be read says so
-    Given the file "state.json" reads "nonsense"
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
-    And it warns "state.json: Expecting value"
+    Given a file "state.json" holding "nonsense"
+    When I run "pubfleet state --check"
+    Then it fails
+    And stderr mentions "state.json: Expecting value"
 
   Scenario: state takes only --check
-    When I run pubfleet "state"
-    Then it does not succeed
+    When I run "pubfleet state"
+    Then it fails
 
   Scenario: A repository that reports every check it requires passes
     Given the state of "example-org" has "one" with protect on and "two" with protect off
     And "example-org/one" has a protect block requiring "ci / passed"
     And "example-org/one" has reported "ci / passed" on its default branch
     And "example-org/two" exists
-    When I run pubfleet "state" "--check"
+    When I run "pubfleet state --check"
     Then it succeeds
 
   Scenario: A check seen only on a recent pull request still counts
@@ -187,7 +191,7 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And "example-org/one" has reported "other" on its default branch
     And "example-org/one" has reported "ci / passed" on a recent pull request
     And "example-org/two" exists
-    When I run pubfleet "state" "--check"
+    When I run "pubfleet state --check"
     Then it succeeds
 
   Scenario: A commit status counts as a check too
@@ -195,7 +199,7 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And "example-org/one" has a protect block requiring "ci / passed"
     And "example-org/one" has a commit status "ci / passed" on its default branch
     And "example-org/two" exists
-    When I run pubfleet "state" "--check"
+    When I run "pubfleet state --check"
     Then it succeeds
 
   Scenario: A required check the repository never reports is refused
@@ -203,8 +207,8 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And "example-org/one" has a protect block requiring "SonarCloud Code Analysis"
     And "example-org/one" has reported "ci / passed" on its default branch
     And "example-org/two" exists
-    When I run pubfleet "state" "--check"
-    Then it does not succeed
+    When I run "pubfleet state --check"
+    Then it fails
     And it prints "example-org/one requires the check "SonarCloud Code Analysis", which it hasn't reported lately"
 
   Scenario: Protect off doesn't look at a repository's checks
@@ -212,14 +216,14 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And "example-org/one" has a protect block requiring "SonarCloud Code Analysis"
     And "example-org/one" has reported "ci / passed" on its default branch
     And "example-org/two" exists
-    When I run pubfleet "state" "--check"
+    When I run "pubfleet state --check"
     Then it succeeds
 
   Scenario: Checks that can't be read aren't held against a repository
     Given the state of "example-org" has "one" with protect on and "two" with protect off
     And "example-org/one" has a protect block requiring "ci / passed"
     And "example-org/two" exists
-    When I run pubfleet "state" "--check"
+    When I run "pubfleet state --check"
     Then it succeeds
 
   Scenario: --discover adds the owner's repositories the state file lacks, by what each one's pubrules.json says
@@ -231,31 +235,31 @@ Feature: A state file says which repositories an owner has, and a repos file whi
     And "example-org/five" exists
     And "example-org/old" is archived
     And "example-org/copy" is a fork
-    When I run pubfleet "state" "--discover" "--body" "body.md"
+    When I run "pubfleet state --discover --body body.md"
     Then it succeeds
     And it prints "3"
     And the state file lists only "five, four, one, three, two"
     And the state file lists "three" as on the board with protect on, not governed
     And the state file lists "four" as on the board with protect off, not governed
     And the state file lists "five" as on the board with protect off, not governed
-    And "body.md" says "| three | public | on: its pubrules.json has a protect block |"
-    And "body.md" says "| five | public | off: no protect block in its pubrules.json |"
-    When I run pubfleet "state" "--check"
+    And the file "body.md" includes "| three | public | on: its pubrules.json has a protect block |"
+    And the file "body.md" includes "| five | public | off: no protect block in its pubrules.json |"
+    When I run "pubfleet state --check"
     Then it succeeds
 
   Scenario: --discover names the listed repositories that are archived or gone, and keeps them
     Given the state of "example-org" has "one" with protect off and "gone" with protect off
     And "example-org/one" exists
     And "example-org/new" exists
-    When I run pubfleet "state" "--discover" "--body" "body.md"
+    When I run "pubfleet state --discover --body body.md"
     Then it prints "1"
     And the state file lists only "gone, new, one"
-    And "body.md" says "never removed by this): `gone`."
+    And the file "body.md" includes "never removed by this): `gone`."
 
   Scenario: --discover with nothing to add changes nothing and writes no description
     Given the state of "example-org" has "one" with protect off and "two" with protect off
     And "example-org/one" exists
     And "example-org/two" exists
-    When I run pubfleet "state" "--discover" "--body" "body.md"
+    When I run "pubfleet state --discover --body body.md"
     Then it prints "0"
-    And there is no "body.md"
+    And the file "body.md" does not exist

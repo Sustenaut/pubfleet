@@ -1,17 +1,18 @@
 """Steps for the repos file and `pubfleet state --check`, against a small fake
-`gh` that answers from a JSON file and logs what it was asked."""
+`gh` among pubtest's stand-ins that answers from a JSON file and logs what it
+was asked to their log, so pubtest's stand-in steps read its runs."""
 
 from __future__ import annotations
 
 import base64
 import json
-import os
 import shutil
 import sys
 from pathlib import Path
 
 import pytest
 import yaml
+from conftest import fake_program
 from pytest_bdd import given, parsers, scenarios, then, when
 
 scenarios("repos.feature")
@@ -23,8 +24,8 @@ FAKE_GH = f"""#!{sys.executable}
 import json, os, re, sys
 state = json.load(open(os.environ["FAKE_GH"]))
 url = sys.argv[-1]
-with open(os.environ["FAKE_GH"] + ".log", "a") as log:
-    log.write(url + "\\n")
+with open(os.environ["FAKE_LOG"], "a") as log:
+    log.write(json.dumps({{"name": "gh", "args": sys.argv[1:]}}) + "\\n")
 def missing():
     print(json.dumps({{"message": "Not Found"}}))
     sys.stderr.write("gh: Not Found (HTTP 404)\\n")
@@ -71,16 +72,11 @@ missing()
 
 
 @pytest.fixture
-def github(tmp_path, env):
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    gh = bin_dir / "gh"
-    gh.write_text(FAKE_GH)
-    gh.chmod(0o755)
+def github(pubtest_ctx, tmp_path, monkeypatch):
+    fake_program(pubtest_ctx, tmp_path, monkeypatch, "gh", FAKE_GH)
     state = tmp_path / "github.json"
     state.write_text(json.dumps({"repos": {}, "files": {}}))
-    env["FAKE_GH"] = str(state)
-    env["PATH"] = f"{bin_dir}{os.pathsep}{os.environ['PATH']}"
+    monkeypatch.setenv("FAKE_GH", str(state))
     return state
 
 
@@ -171,31 +167,6 @@ def parse_workflow(name):
     return {"data": yaml.safe_load((WORKFLOWS / name).read_text())}
 
 
-@then("it does not succeed")
-def not_ok(result):
-    assert result.code != 0, result.stdout
-
-
-@then(parsers.parse('it does not print "{text}"'))
-def not_printed(result, text):
-    assert text not in result.stdout
-
-
-@then(parsers.parse('it warns "{text}"'))
-def warns(result, text):
-    assert text in result.stderr, result.stderr
-
-
-@then("it warns of nothing")
-def no_warning(result):
-    assert result.stderr == ""
-
-
-@then("GitHub was asked nothing")
-def asked_nothing(env):
-    assert not Path(env["FAKE_GH"] + ".log").exists()
-
-
 @pytest.fixture(autouse=True)
 def fake_github(github):
     """Every scenario here has the fake; none reaches GitHub."""
@@ -264,13 +235,3 @@ def lists_as(repo, name, roles):
 def lists_only(repo, names):
     state = json.loads((repo / "state.json").read_text())
     assert list(state["repos"]) == names.split(", "), list(state["repos"])
-
-
-@then(parsers.parse('"{path}" says "{text}"'))
-def file_says(repo, path, text):
-    assert text in (repo / path).read_text(), (repo / path).read_text()
-
-
-@then(parsers.parse('there is no "{path}"'))
-def no_file(repo, path):
-    assert not (repo / path).exists()
