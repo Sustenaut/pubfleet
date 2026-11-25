@@ -229,6 +229,56 @@ removes one. The token needs to read the repositories' contents and variables, a
 `--apply` to write variables and run workflows (the Variables and Actions permissions,
 for a GitHub App).
 
+### The SLA block of a state file
+
+A state file may hold an `SLA` block: how soon each service's calls must reach the call
+log, and how soon its silence or its address not answering is found. Its tiers are org
+configuration, named by the owner and defined once; each service of the state names the
+tier of each of its senders and of its address. pubfleet owns the block and is its one
+schema (`pubfleet.sla`):
+
+```json
+"SLA": {"version": 1,
+        "tiers": {"tight": {"deadline_seconds": 30, "heartbeat_seconds": 60, "misses": 2, "uptime_minutes": 10},
+                  "idle": {"deadline_seconds": 28800, "heartbeat_seconds": 3600, "misses": 3},
+                  "on-demand": {"deadline_seconds": 120}},
+        "services": {"release-controlplane": {"senders": {"app": "tight"}, "uptime": "tight"},
+                     "business-plan": {"senders": {"plan": "on-demand"}, "uptime": "tight",
+                                       "address": "https://plan.example.eu/healthz"}}}
+```
+
+A tier has `deadline_seconds`, and maybe `heartbeat_seconds` (how often a quiet sender
+says it is alive; a tier without one has no heartbeat and no alarm for silence), `misses`
+(heartbeats missed in a row before the alarm, at least 2, 2 when left out) and
+`uptime_minutes` (how soon an address not answering is found). A service's `uptime`
+names a tier with `uptime_minutes`; its `address` is the https URL checked, else
+https:// and its deploy's host. A block of an older version is read through the
+transformers, one a version, chained to the latest.
+
+From it pubfleet derives:
+
+- each sender's absence alert: `misses` × `heartbeat_seconds` and a margin of 180 s;
+- each address's uptime check: every 1, 5, 10 or 15 minutes, the longest at most half
+  the tier's `uptime_minutes`, from three regions, alarming once two of them fail two
+  runs in a row;
+- the GitHub variables: each service's `CALL_LOG_DEADLINE_SECONDS`, the tightest of its
+  senders', and while observability judges silence, its `OBSERVABILITY_SENDERS` (a tier
+  with no heartbeat as `on-demand`). A tier's `heartbeat_seconds` is its Cloud Monitoring
+  metric's: the call log's file heartbeat, `CALL_LOG_HEARTBEAT_SECONDS`, a file in storage
+  each time, is never derived, and stays a plain variable of the state while there is one.
+  `pubfleet variables` gives them as it gives the state's own; the state may not set one
+  of them beside the block, and a repository that doesn't declare one yet is not given it;
+- the budget: uptime runs a month (each region's run is one) and the heartbeats' metric
+  bytes (8 a point, each replica its own) against Cloud Monitoring's free 1 million runs
+  and 150 MiB.
+
+`pubfleet state --check` refuses a block of the wrong shape, one naming a service the
+state doesn't list, numbers Cloud Monitoring can't take, and one past a free tier.
+`pubfleet sla --derive` prints everything derived as JSON, for shared-infra's Terraform
+variable (`--offline` reads no pubrules.json, so every uptime service needs an address),
+and `pubfleet sla --budget` the budget alone, failing past a free tier. `--replicas
+SERVICE/SENDER=N` counts a sender run N at once (1 by default).
+
 ## Freshness
 
     pubfleet freshness [--json] DIR...

@@ -3,7 +3,8 @@
 
     {"owner": "OWNER",
      "repos": {"NAME": {"project": "some-group", "board": true, "protect": true, "govern": false,
-                        "deploy": true, "variables": {"SOME_SETTING": "a value"}}}}
+                        "deploy": true, "variables": {"SOME_SETTING": "a value"}}},
+     "SLA": {"version": 1, "tiers": {...}, "services": {...}}}
 
 One file per GitHub owner says which of its repositories are graded, protected
 and governed. This checks its shape, that each repository exists under the
@@ -14,7 +15,10 @@ deploy block there, for the same reason, and that the repository has reported ev
 the block requires, since a ruleset requiring one it never reports stops anything
 merging. A repository's `variables` (optional) are the values of its GitHub variables,
 which `pubfleet variables` keeps them to: each a string or JSON, and each one its own
-pubrules.json declares in its variables block. That last check is the best it can be: it looks at the default branch's newest
+pubrules.json declares in its variables block. Its `SLA` block (optional; pubfleet.sla)
+must be sound as pubrules reads it, name only repositories the file lists, take numbers
+Cloud Monitoring takes, stay within its free tiers, and not be set beside a variable it
+derives. The protect check is the best it can be: it looks at the default branch's newest
 commit and a few recent pull requests, and says nothing when it can't read them. It is the state repository's one required
 check, so it builds nothing and takes seconds. It reads GitHub through `gh`,
 with a token that can read every repository the file names. The one exception is
@@ -50,8 +54,10 @@ def shape(state: Any) -> list[str]:
     """What is wrong with the file's shape, one phrase each."""
     if not isinstance(state, dict):
         return [f"it is {json.dumps(state)}, not an object"]
-    out = [f"{key} is not a setting; it takes owner and repos"
-           for key in sorted(state.keys() - {"owner", "repos"})]
+    from . import sla  # noqa: PLC0415 - sla imports pubrules' block, as this does variables
+
+    out = [f"{key} is not a setting; it takes owner, repos and {sla.BLOCK}"
+           for key in sorted(state.keys() - {"owner", "repos", sla.BLOCK})]
     if not OWNER.fullmatch(str(state.get("owner", ""))) or not isinstance(state.get("owner"), str):
         out.append('"owner" must be a GitHub owner')
     repos = state.get("repos")
@@ -76,6 +82,13 @@ def shape(state: Any) -> list[str]:
                 out.append(f"{name}: \"{role}\" must be true or false")
         if not isinstance(roles.get("project", ""), str) or roles.get("project") == "":
             out.append(f"{name}: \"project\" must be a name")
+    out += sla.problems(state)
+    if sla.BLOCK in state and not any(p.startswith(f"its {sla.BLOCK} block") for p in out):
+        set_twice = {name: sorted(set(repos[name].get(variables.BLOCK) or {}) & set(given))
+                     for name, given in variables.derived(state).items()
+                     if isinstance(repos.get(name), dict)}
+        out += [f"{name}: its variables give {', '.join(both)}, which the {sla.BLOCK} block sets: drop them here"
+                for name, both in set_twice.items() if both]
     return out
 
 

@@ -5,6 +5,7 @@
     pubfleet state --check | --repos-for board|govern|deploy | --discover [--body PATH] [FILE]
     pubfleet variables --check|--apply [--state FILE] [--repos FILE | REPO...]
     pubfleet freshness [--json] (DIR... | --repos FILE [DIR])
+    pubfleet sla --derive|--budget [--state FILE] [--replicas SERVICE/SENDER=N ...] [--offline]
 
 Each reads GitHub through `gh`, with a token the command's help names, and
 judges by the pubrules installed beside it.
@@ -67,6 +68,19 @@ def parser() -> argparse.ArgumentParser:
                    help="the repos file: act on those it lists that the state gives variables")
     p.add_argument("repos", nargs="*", metavar="REPO",
                    help="NAME or OWNER/NAME; by default every repository the state gives variables")
+    p = commands.add_parser("sla", help="derive what a state file's SLA block gives: the senders' "
+                                         "settings, the uptime checks, the variables and the budget")
+    what = p.add_mutually_exclusive_group(required=True)
+    what.add_argument("--derive", action="store_true",
+                      help="print it all as JSON, for shared-infra's Terraform variable")
+    what.add_argument("--budget", action="store_true",
+                      help="print what it spends of Cloud Monitoring's free tiers, failing past one")
+    p.add_argument("--state", type=Path, default=Path("state.json"), metavar="FILE",
+                   help="the state file (default: state.json)")
+    p.add_argument("--replicas", action="append", default=[], metavar="SERVICE/SENDER=N",
+                   help="how many of a sender run at once, for the budget (default 1 each)")
+    p.add_argument("--offline", action="store_true",
+                   help="read no pubrules.json: every service with an uptime tier needs an address")
     p = commands.add_parser("freshness",
                             help="report which pinned pubrules and standard each repository meets")
     p.add_argument("--json", action="store_true", help="JSON rows instead of a Markdown table")
@@ -78,6 +92,10 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911 - one branch per command
     args = parser().parse_args(argv)
+    if args.command == "sla":
+        from .sla import run as sla  # noqa: PLC0415
+        return sla(confined(args.state, "the state file"), "budget" if args.budget else "derive",
+                   args.replicas, args.offline)
     if args.command == "freshness":
         from .freshness import freshness  # noqa: PLC0415
         repos_file = confined(args.repos, "the --repos file") if args.repos else None
