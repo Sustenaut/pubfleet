@@ -166,12 +166,12 @@ Feature: The SLA block of a state file: tiers once, each service's, and what pub
       | case      | tier                                                                   |
       | too long  | {"deadline_seconds": 60, "heartbeat_seconds": 43200, "misses": 2}      |
 
-  Scenario: The variables: each service's tightest deadline and heartbeat, and observability's senders
+  Scenario: The variables: each service's tightest deadline, and observability's senders; never a file heartbeat
     Given a sound SLA block
     When pubfleet derives from it, offline
     Then the derived variables are:
       """
-      {"one": {"CALL_LOG_DEADLINE_SECONDS": "30", "CALL_LOG_HEARTBEAT_SECONDS": "60"},
+      {"one": {"CALL_LOG_DEADLINE_SECONDS": "30"},
        "two": {"CALL_LOG_DEADLINE_SECONDS": "120"},
        "observability": {"OBSERVABILITY_SENDERS": {"one": {"app": "tight", "job": "idle"}, "two": {"plan": "on-demand"}}}}
       """
@@ -296,13 +296,12 @@ Feature: The SLA block of a state file: tiers once, each service's, and what pub
   Scenario: --apply sets the variables the SLA block derives, beside the state's own
     Given a sound SLA block
     And the state file holds it, and gives "one" the variables '{"OTHER": "x"}'
-    And "example-org/one" declares the variables ["OTHER", "CALL_LOG_DEADLINE_SECONDS", "CALL_LOG_HEARTBEAT_SECONDS"]
+    And "example-org/one" declares the variables ["OTHER", "CALL_LOG_DEADLINE_SECONDS"]
     And "example-org/two" declares the variables ["CALL_LOG_DEADLINE_SECONDS"]
     And "example-org/observability" declares the variables ["OBSERVABILITY_SENDERS"]
     When I run "pubfleet variables --apply"
     Then it succeeds
     And GitHub holds "CALL_LOG_DEADLINE_SECONDS" in "example-org/one" as "30" now
-    And GitHub holds "CALL_LOG_HEARTBEAT_SECONDS" in "example-org/one" as "60" now
     And GitHub holds "OTHER" in "example-org/one" as "x" now
     And GitHub holds "CALL_LOG_DEADLINE_SECONDS" in "example-org/two" as "120" now
     And GitHub holds "OBSERVABILITY_SENDERS" in "example-org/observability" as "{"one":{"app":"tight","job":"idle"},"two":{"plan":"on-demand"}}" now
@@ -315,17 +314,33 @@ Feature: The SLA block of a state file: tiers once, each service's, and what pub
     And "example-org/observability" declares the variables ["OBSERVABILITY_SENDERS"]
     When I run "pubfleet variables --apply"
     Then it succeeds
-    And it prints "example-org/one: the SLA block gives it CALL_LOG_DEADLINE_SECONDS, CALL_LOG_HEARTBEAT_SECONDS, which its pubrules.json doesn't declare yet, so they are left alone"
+    And it prints "example-org/one: the SLA block gives it CALL_LOG_DEADLINE_SECONDS, which its pubrules.json doesn't declare yet, so they are left alone"
     And it prints "example-org/two: the SLA block gives it CALL_LOG_DEADLINE_SECONDS, which it doesn't declare yet, so they are left alone"
     And GitHub holds "OTHER" in "example-org/one" as "x" now
 
   Scenario: --check names the derived variables that differ
     Given a sound SLA block
     And the state file holds it
-    And "example-org/one" declares the variables ["CALL_LOG_DEADLINE_SECONDS", "CALL_LOG_HEARTBEAT_SECONDS"]
+    And "example-org/one" declares the variables ["CALL_LOG_DEADLINE_SECONDS"]
     And "example-org/two" declares the variables ["CALL_LOG_DEADLINE_SECONDS"]
     And "example-org/observability" declares the variables ["OBSERVABILITY_SENDERS"]
     And GitHub holds "CALL_LOG_DEADLINE_SECONDS" in "example-org/one" as "60"
     When I run "pubfleet variables --check one"
     Then it fails
     And it prints "CALL_LOG_DEADLINE_SECONDS:"
+
+  Scenario: A file heartbeat the state gives a service stays the state's, beside the derived deadline
+    Given a sound SLA block
+    And the state file holds it, and gives "one" the variables '{"CALL_LOG_HEARTBEAT_SECONDS": "300"}'
+    When pubfleet checks the state's shape
+    Then the result is "[]"
+
+  Scenario: A pubrules.json that can't be read fails, and says so, not that it doesn't declare them
+    Given a sound SLA block
+    And the state file holds it
+    And "example-org/two" declares the variables ["CALL_LOG_DEADLINE_SECONDS"]
+    And "example-org/observability" declares the variables ["OBSERVABILITY_SENDERS"]
+    When I run "pubfleet variables --apply one"
+    Then the exit code is 1
+    And it prints "example-org/one: its pubrules.json can't be read for its variables, so none is set"
+    And it does not print "doesn't declare yet"

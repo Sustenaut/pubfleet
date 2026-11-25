@@ -25,11 +25,11 @@ or those named (NAME or OWNER/NAME), or those a repos file lists. It reads throu
 for --apply, write their variables and run their workflows.
 
 A state with an SLA block (pubfleet.sla) also gives repositories the variables derived
-from it: each service's CALL_LOG_DEADLINE_SECONDS, while the call log's heartbeats are
-files its CALL_LOG_HEARTBEAT_SECONDS, and observability's OBSERVABILITY_SENDERS. The
-state may not give one of those itself, as the block is where it is set. A repository
-whose pubrules.json doesn't declare a derived one yet is not given it, and says so: a
-service declares them when its deploy passes them to its pods.
+from it: each service's CALL_LOG_DEADLINE_SECONDS, and observability's
+OBSERVABILITY_SENDERS. The state may not give one of those itself, as the block is where
+it is set. A repository whose pubrules.json doesn't declare a derived one yet is not given
+it, and says so: a service declares them when its deploy passes them to its pods. One
+whose pubrules.json can't be read fails, as for the state's own variables.
 """
 
 from __future__ import annotations
@@ -111,11 +111,15 @@ def live(api: Api, slug: str) -> dict[str, str]:
         page += 1
 
 
+class Undeclared(ValueError):
+    """A pubrules.json read, and declaring no variables."""
+
+
 def declared(api: Api, slug: str) -> dict:
     """`slug`'s variables block, from the pubrules.json on its default branch."""
     config = remote_config(api, slug)
     if not isinstance(config, dict) or BLOCK not in config:
-        raise ValueError(f"its pubrules.json declares no variables; add "
+        raise Undeclared(f"its pubrules.json declares no variables; add "
                          f'"{BLOCK}": {{"names": [...]}} to it')
     if bad := block_problems(config[BLOCK]):
         raise ValueError(f"its pubrules.json's {BLOCK} block: {'; '.join(bad)}")
@@ -178,11 +182,14 @@ def one(api: Api, slug: str, values: dict, apply: bool, setter,
     notes = []
     try:
         block = declared(api, slug)
-    except ValueError as e:
+    except Undeclared as e:
         if values.keys() <= derived_names:
             return [f"{slug}: the SLA block gives it {', '.join(sorted(values))}, which it doesn't "
                     f"declare yet, so they are left alone"], False, False
         return [f"{slug}: {e}"], False, True
+    except ValueError as e:
+        # Not read at all, or a block of the wrong shape: nothing is known it declares.
+        return [f"{slug}: its pubrules.json can't be read for its variables, so none is set: {e}"], False, True
     if waiting := sorted(n for n in undeclared(block, values) if n in derived_names):
         notes = [f"{slug}: the SLA block gives it {', '.join(waiting)}, which its pubrules.json doesn't "
                  f"declare yet, so they are left alone"]
