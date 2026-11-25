@@ -47,8 +47,9 @@ holds it to, and which the installed pubrules must have:
   `pubrules.protect.Api`, `pubrules.protect.ApiError`,
   `pubrules.protect.remote_config`;
 - the repos file: `pubrules.repos.read`, `pubrules.repos.entries`;
-- the variables block's shape: `pubrules.variables.BLOCK`,
-  `pubrules.variables.block_problems`, `pubrules.variables.name_problem`;
+- the variables block's shape and defaults: `pubrules.variables.BLOCK`,
+  `pubrules.variables.block_problems`, `pubrules.variables.name_problem`,
+  `pubrules.variables.defaults`;
 - the pins the board and freshness read: `pubrules.refs.ANY_OWNER`,
   `pubrules.refs.AT`, `pubrules.refs.VERSION`, `pubrules.refs.RELEASE_PIN`,
   `pubrules.freshness.PIN`, `pubrules.freshness.pinned`,
@@ -228,6 +229,14 @@ those a repos file lists, and neither touches a variable the state leaves out no
 removes one. The token needs to read the repositories' contents and variables, and for
 `--apply` to write variables and run workflows (the Variables and Actions permissions,
 for a GitHub App).
+
+A repository's block of version 2 (pubrules 0.49.1) may give a name a `defaults`
+entry, the constant its code falls back to when the variable is unset or empty. A
+state value equal to that default is then satisfied with GitHub holding nothing, or
+an empty value, so nothing is set; pubfleet says so as information only, never as a
+failure, since the state need not give it. A null default is no value: a state value
+for that name still has to be set. A default compares as the state's values do, as
+GitHub would hold it.
 
 ### The SLA block of a state file
 

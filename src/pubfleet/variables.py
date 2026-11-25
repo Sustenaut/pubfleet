@@ -30,6 +30,13 @@ OBSERVABILITY_SENDERS. The state may not give one of those itself, as the block 
 it is set. A repository whose pubrules.json doesn't declare a derived one yet is not given
 it, and says so: a service declares them when its deploy passes them to its pods. One
 whose pubrules.json can't be read fails, as for the state's own variables.
+
+A block of version 2 may give a name the code's default (pubrules' README, "variables"),
+which the code reads when the variable is unset, or empty, as a deploy renders an unset
+one. GitHub not holding it, or holding it empty, is then as good as the state's value when
+that value is the default: it is not set. A state value equal to the default is said, as
+information only, never a failure: the state need not give it. A default compares as the
+state's own values do, as GitHub would hold it.
 """
 
 from __future__ import annotations
@@ -43,6 +50,7 @@ from typing import Any
 from pubrules.protect import Api, ApiError, gh, gh_set, remote_config
 from pubrules.repos import read
 from pubrules.variables import BLOCK, block_problems, name_problem
+from pubrules.variables import defaults as defaults_of
 
 PAGE = 30
 
@@ -76,6 +84,12 @@ def same(want: Any, have: str) -> bool:
         return canonical(json.loads(have)) == canonical(want)
     except ValueError:
         return False
+
+
+def is_default(value: Any, defaults: dict[str, Any], name: str) -> bool:
+    """Whether the state's value for `name` is the default its block gives, as GitHub would
+    hold either. A null default (the code reads unset as nothing set) is no value."""
+    return name in defaults and defaults[name] is not None and same(value, serialise(defaults[name]))
 
 
 def pretty(value: Any) -> list[str]:
@@ -203,7 +217,15 @@ def one(api: Api, slug: str, values: dict, apply: bool, setter,
         have = live(api, slug)
     except ApiError as e:
         return [f"{slug}: its variables can't be read ({e})"], False, True
-    differs = [n for n, v in values.items() if n not in have or not same(v, have[n])]
+    # GitHub holding a variable empty is as unset: a deploy renders an unset one so.
+    have = {n: v for n, v in have.items() if v != ""}
+    defaults = defaults_of(block)
+    if redundant := sorted(n for n, v in values.items() if is_default(v, defaults, n)):
+        notes.append(f"{slug}: the state gives {', '.join(redundant)} {'its' if len(redundant) == 1 else 'their'} "
+                     f"default, which leaving {'it' if len(redundant) == 1 else 'them'} unset gives too "
+                     f"(information only)")
+    differs = [n for n, v in values.items()
+               if not (n in have and same(v, have[n])) and not (n not in have and n in redundant)]
     if not differs:
         return [*notes, f"{slug}: {len(values)} variables as the state says"], False, False
     lines = [*notes, f"{slug}: {len(differs)} of {len(values)} variables differ from the state"]

@@ -130,3 +130,48 @@ Feature: pubfleet variables keeps repositories' GitHub variables to a state file
       | {"GITHUB_TOKEN": "x"}     | "GITHUB_TOKEN" is not a variable's name  |
       | {"SOME": ""}              | SOME has no value                        |
       | {"SOME": null}            | SOME has no value                        |
+
+  Scenario: A state value equal to the default is satisfied unset, and said as information only
+    Given "example-org/one" has the pubrules.json "{"kind": "service", "variables": {"version": 2, "names": ["SOME_SECONDS", "SOME_URL"], "defaults": {"SOME_SECONDS": "120"}, "deploy": "deploy.yml"}}"
+    And the state gives "one" the variables "{"SOME_SECONDS": "120"}"
+    When I run "pubfleet variables --apply"
+    Then it succeeds
+    And it prints "example-org/one: the state gives SOME_SECONDS its default, which leaving it unset gives too (information only)"
+    And it prints "example-org/one: 1 variables as the state says"
+    And nothing was set or run
+
+  Scenario: An empty variable is unset, so the default satisfies it too
+    Given "example-org/one" has the pubrules.json "{"kind": "service", "variables": {"version": 2, "names": ["SOME_SECONDS", "SOME_URL"], "defaults": {"SOME_SECONDS": "120"}}}"
+    And the state gives "one" the variables "{"SOME_SECONDS": 120}"
+    And GitHub holds "SOME_SECONDS" in "example-org/one" as ""
+    When I run "pubfleet variables --check"
+    Then it succeeds
+    And it prints "the state gives SOME_SECONDS its default"
+
+  Scenario: A JSON default compares as the state's values do, however spaced
+    Given "example-org/one" has the pubrules.json "{"kind": "service", "variables": {"version": 2, "names": ["SOME_MAP", "SOME_URL"], "defaults": {"SOME_MAP": {"a": "x", "b": "y"}}}}"
+    And the state gives "one" the variables "{"SOME_MAP": {"b": "y", "a": "x"}}"
+    When I run "pubfleet variables --check"
+    Then it succeeds
+    And it prints "the state gives SOME_MAP its default"
+
+  Scenario: GitHub holding another value than the default the state gives is set to it
+    Given "example-org/one" has the pubrules.json "{"kind": "service", "variables": {"version": 2, "names": ["SOME_SECONDS", "SOME_URL"], "defaults": {"SOME_SECONDS": "120"}}}"
+    And the state gives "one" the variables "{"SOME_SECONDS": "120"}"
+    And GitHub holds "SOME_SECONDS" in "example-org/one" as "600"
+    When I run "pubfleet variables --check"
+    Then it fails
+    And it prints "example-org/one: 1 of 1 variables differ from the state"
+    When I run "pubfleet variables --apply"
+    Then it succeeds
+    And GitHub holds "SOME_SECONDS" in "example-org/one" as "120" now
+
+  Scenario: A value other than the default, or a null default, still has to be set
+    Given "example-org/one" has the pubrules.json "{"kind": "service", "variables": {"version": 2, "names": ["SOME_SECONDS", "SOME_URL"], "defaults": {"SOME_SECONDS": "120", "SOME_URL": null}}}"
+    And the state gives "one" the variables "{"SOME_SECONDS": "600", "SOME_URL": "https://example.com"}"
+    And GitHub holds "SOME_SECONDS" in "example-org/one" as ""
+    When I run "pubfleet variables --check"
+    Then it fails
+    And it prints "example-org/one: 2 of 2 variables differ from the state"
+    And it prints "SOME_SECONDS is not set; the state has:"
+    And it does not print "its default"

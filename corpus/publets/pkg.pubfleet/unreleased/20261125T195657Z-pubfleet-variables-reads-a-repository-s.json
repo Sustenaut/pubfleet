@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubfleet variables reads a repository's variables block of version 2 (pubrules 0.49.1, now the floor): a state value equal to a name's default is satisfied with GitHub holding nothing or an empty value, and said as information only, never a failure; an empty variable counts as unset"
+}
