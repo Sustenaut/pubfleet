@@ -23,6 +23,13 @@ deliberate step by hand. Each acts on every repository in the state with variabl
 or those named (NAME or OWNER/NAME), or those a repos file lists. It reads through
 `gh`, with a token that can read the repositories' pubrules.json and variables, and,
 for --apply, write their variables and run their workflows.
+
+A state with an SLA block (pubfleet.sla) also gives repositories the variables derived
+from it: each service's CALL_LOG_DEADLINE_SECONDS, while the call log's heartbeats are
+files its CALL_LOG_HEARTBEAT_SECONDS, and observability's OBSERVABILITY_SENDERS. The
+state may not give one of those itself, as the block is where it is set. A repository
+whose pubrules.json doesn't declare a derived one yet is not given it, and says so: a
+service declares them when its deploy passes them to its pods.
 """
 
 from __future__ import annotations
@@ -119,13 +126,36 @@ def undeclared(block: dict, values: dict) -> list[str]:
     return [n for n in values if n not in block["names"]]
 
 
+def derived(state: dict) -> dict[str, dict[str, Any]]:
+    """The variables the state's SLA block gives each repository, by name."""
+    from . import sla  # noqa: PLC0415 - sla reads pubrules' block, which state checks first
+
+    if sla.BLOCK not in state:
+        return {}
+    block = sla.read(state[sla.BLOCK])
+    return sla.variables(block, sla.numbers(block))
+
+
+def wanted(state: dict) -> dict[str, tuple[dict[str, Any], set[str]]]:
+    """Each repository's variables, the state's and the SLA block's, with the names derived."""
+    out: dict[str, tuple[dict[str, Any], set[str]]] = {}
+    from_sla = derived(state)
+    for name, roles in state["repos"].items():
+        given = dict(roles.get(BLOCK) or {})
+        extra = from_sla.get(name, {})
+        if given or extra:
+            out[name] = ({**given, **extra}, set(extra))
+    return out
+
+
 def chosen(state: dict, names: list[str], repos_file: Path | None) -> list[str]:
     """The repositories to act on, by name within the state's owner."""
     owner = state["owner"]
     if repos_file:
         names = [e["repo"] for e in read(repos_file, "variables")]
+    has = wanted(state)
     if not names:
-        return [n for n, roles in state["repos"].items() if roles.get(BLOCK)]
+        return [n for n in state["repos"] if n in has]
     out = []
     for name in names:
         own, _, short = name.rpartition("/")
@@ -133,19 +163,32 @@ def chosen(state: dict, names: list[str], repos_file: Path | None) -> list[str]:
             sys.exit(f"pubfleet variables: {name} is not one of {owner}'s, as the state is")
         if short not in state["repos"]:
             sys.exit(f"pubfleet variables: the state names no repository {short}")
-        if state["repos"][short].get(BLOCK):
+        if short in has:
             out.append(short)
         elif not repos_file:
             sys.exit(f"pubfleet variables: the state gives {short} no variables")
     return out
 
 
-def one(api: Api, slug: str, values: dict, apply: bool, setter) -> tuple[list[str], bool, bool]:
-    """Lines for one repository, whether it differs, and whether something failed."""
+def one(api: Api, slug: str, values: dict, apply: bool, setter,
+        derived_names: set[str] | None = None) -> tuple[list[str], bool, bool]:
+    """Lines for one repository, whether it differs, and whether something failed.
+    `derived_names` are those its SLA block gives, left alone while undeclared."""
+    derived_names = derived_names or set()
+    notes = []
     try:
         block = declared(api, slug)
     except ValueError as e:
+        if values.keys() <= derived_names:
+            return [f"{slug}: the SLA block gives it {', '.join(sorted(values))}, which it doesn't "
+                    f"declare yet, so they are left alone"], False, False
         return [f"{slug}: {e}"], False, True
+    if waiting := sorted(n for n in undeclared(block, values) if n in derived_names):
+        notes = [f"{slug}: the SLA block gives it {', '.join(waiting)}, which its pubrules.json doesn't "
+                 f"declare yet, so they are left alone"]
+        values = {k: v for k, v in values.items() if k not in waiting}
+        if not values:
+            return notes, False, False
     if names := undeclared(block, values):
         return [f"{slug}: its pubrules.json doesn't declare {', '.join(names)}, "
                 f"which the state gives it"], False, True
@@ -155,8 +198,8 @@ def one(api: Api, slug: str, values: dict, apply: bool, setter) -> tuple[list[st
         return [f"{slug}: its variables can't be read ({e})"], False, True
     differs = [n for n, v in values.items() if n not in have or not same(v, have[n])]
     if not differs:
-        return [f"{slug}: {len(values)} variables as the state says"], False, False
-    lines = [f"{slug}: {len(differs)} of {len(values)} variables differ from the state"]
+        return [*notes, f"{slug}: {len(values)} variables as the state says"], False, False
+    lines = [*notes, f"{slug}: {len(differs)} of {len(values)} variables differ from the state"]
     for name in differs:
         lines += difference(name, values[name], have.get(name))
     if not apply:
@@ -192,9 +235,11 @@ def run(path: Path, names: list[str], apply: bool, repos_file: Path | None = Non
     if not repos:
         print(f"{path}: no repository of {state['owner']} has variables")
         return 0
+    has = wanted(state)
     differs = failed = False
     for name in repos:
-        lines, d, f = one(api, f"{state['owner']}/{name}", state["repos"][name][BLOCK], apply, setter)
+        values, names_derived = has[name]
+        lines, d, f = one(api, f"{state['owner']}/{name}", values, apply, setter, names_derived)
         print("\n".join(lines))
         differs, failed = differs or d, failed or f
     return 1 if failed or (differs and not apply) else 0

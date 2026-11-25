@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubfleet owns a state file's SLA block (version 1, chained transformers): tiers named once, each with deadline_seconds and maybe heartbeat_seconds, misses (at least 2) and uptime_minutes, and each service's senders' and address's tiers; pubfleet sla --derive prints each sender's absence window (misses × heartbeat + 180 s), each address's uptime check (half the tier's minutes, three regions, alarm on two failing twice) and the derived variables as JSON, and sla --budget counts them against Cloud Monitoring's free tiers"
+}

@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubfleet variables gives each service the CALL_LOG_DEADLINE_SECONDS (and while heartbeats are files CALL_LOG_HEARTBEAT_SECONDS and observability's OBSERVABILITY_SENDERS) its SLA block derives, leaving one alone while undeclared; pubfleet state --check refuses an unsound SLA block, one past a free tier, and a variable set beside it"
+}
