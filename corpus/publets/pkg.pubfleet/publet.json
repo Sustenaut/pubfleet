@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubfleet 0.2.1 is released as v0.2.1 from commit 6c7a4460ba05cafdfffadd291f13c811c2dfae7c.",
+      "content": "pubfleet 0.2.2 is released as v0.2.2 from commit 1cc52d773c227089a0d5a7411a6b147ae8e5d0a0.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubfleet",
-            "0.2.1",
+            "0.2.2",
             "pubfleet --version",
-            "pubfleet 0.2.1",
-            "v0.2.1",
-            "6c7a4460ba05cafdfffadd291f13c811c2dfae7c"
+            "pubfleet 0.2.2",
+            "v0.2.2",
+            "1cc52d773c227089a0d5a7411a6b147ae8e5d0a0"
           ]
         ]
       },
-      "scope": "the published release v0.2.1 of pubfleet",
+      "scope": "the published release v0.2.2 of pubfleet",
       "sources": [
         {
           "ref": "pubfleet",
-          "revision": "6c7a4460ba05cafdfffadd291f13c811c2dfae7c"
+          "revision": "1cc52d773c227089a0d5a7411a6b147ae8e5d0a0"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubfleet 0.2.1 was released on 2026-11-17 from commit 6c7a4460ba05cafdfffadd291f13c811c2dfae7c with these changes.",
+      "content": "pubfleet 0.2.2 was released on 2026-11-25 from commit 1cc52d773c227089a0d5a7411a6b147ae8e5d0a0 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,24 +57,40 @@
         ],
         "rows": [
           [
-            "fixed",
-            "pubfleet state --check reads the repository it runs in (GITHUB_REPOSITORY) from the pubrules.json beside the state file, not from its default branch, so a state repository's pull request that adds or moves its own protect block can pass its own check"
+            "internal",
+            "The suite's scenarios are Given/When/Then on pubtest's steps"
+          ],
+          [
+            "added",
+            "pubfleet owns a state file's SLA block (version 1, chained transformers): tiers named once, each with deadline_seconds and maybe heartbeat_seconds, misses (at least 2) and uptime_minutes, and each service's senders' and address's tiers; pubfleet sla --derive prints each sender's absence window (misses × heartbeat + 180 s), each address's uptime check (half the tier's minutes, three regions, alarm on two failing twice) and the derived variables as JSON, and sla --budget counts them against Cloud Monitoring's free tiers"
+          ],
+          [
+            "added",
+            "pubfleet variables gives each service the CALL_LOG_DEADLINE_SECONDS (and while observability judges silence its OBSERVABILITY_SENDERS; never CALL_LOG_HEARTBEAT_SECONDS, the call log's file heartbeat, which stays the state's) its SLA block derives, leaving one alone while undeclared; pubfleet state --check refuses an unsound SLA block, one past a free tier, and a variable set beside it"
+          ],
+          [
+            "added",
+            "pubfleet derives each service's CALL_LOG_METRIC_SECONDS from its SLA block: the tightest heartbeat_seconds of its senders that have one, the interval of integrations' heartbeat metric"
+          ],
+          [
+            "added",
+            "pubfleet variables reads a repository's variables block of version 2 (pubrules 0.49.1, now the floor): a state value equal to a name's default is satisfied with GitHub holding nothing or an empty value, and said as information only, never a failure; an empty variable counts as unset"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.1 of pubfleet",
+      "scope": "the published release v0.2.2 of pubfleet",
       "sources": [
         {
           "ref": "pubfleet",
-          "revision": "6c7a4460ba05cafdfffadd291f13c811c2dfae7c"
+          "revision": "1cc52d773c227089a0d5a7411a6b147ae8e5d0a0"
         }
       ]
     }
   },
-  "created": "2026-11-17T00:00:00Z",
+  "created": "2026-11-25T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
