@@ -171,7 +171,7 @@ Feature: The SLA block of a state file: tiers once, each service's, and what pub
     When pubfleet derives from it, offline
     Then the derived variables are:
       """
-      {"one": {"CALL_LOG_DEADLINE_SECONDS": "30"},
+      {"one": {"CALL_LOG_DEADLINE_SECONDS": "30", "CALL_LOG_METRIC_SECONDS": "60"},
        "two": {"CALL_LOG_DEADLINE_SECONDS": "120"},
        "observability": {"OBSERVABILITY_SENDERS": {"one": {"app": "tight", "job": "idle"}, "two": {"plan": "on-demand"}}}}
       """
@@ -296,12 +296,13 @@ Feature: The SLA block of a state file: tiers once, each service's, and what pub
   Scenario: --apply sets the variables the SLA block derives, beside the state's own
     Given a sound SLA block
     And the state file holds it, and gives "one" the variables '{"OTHER": "x"}'
-    And "example-org/one" declares the variables ["OTHER", "CALL_LOG_DEADLINE_SECONDS"]
+    And "example-org/one" declares the variables ["OTHER", "CALL_LOG_DEADLINE_SECONDS", "CALL_LOG_METRIC_SECONDS"]
     And "example-org/two" declares the variables ["CALL_LOG_DEADLINE_SECONDS"]
     And "example-org/observability" declares the variables ["OBSERVABILITY_SENDERS"]
     When I run "pubfleet variables --apply"
     Then it succeeds
     And GitHub holds "CALL_LOG_DEADLINE_SECONDS" in "example-org/one" as "30" now
+    And GitHub holds "CALL_LOG_METRIC_SECONDS" in "example-org/one" as "60" now
     And GitHub holds "OTHER" in "example-org/one" as "x" now
     And GitHub holds "CALL_LOG_DEADLINE_SECONDS" in "example-org/two" as "120" now
     And GitHub holds "OBSERVABILITY_SENDERS" in "example-org/observability" as "{"one":{"app":"tight","job":"idle"},"two":{"plan":"on-demand"}}" now
@@ -314,7 +315,7 @@ Feature: The SLA block of a state file: tiers once, each service's, and what pub
     And "example-org/observability" declares the variables ["OBSERVABILITY_SENDERS"]
     When I run "pubfleet variables --apply"
     Then it succeeds
-    And it prints "example-org/one: the SLA block gives it CALL_LOG_DEADLINE_SECONDS, which its pubrules.json doesn't declare yet, so they are left alone"
+    And it prints "example-org/one: the SLA block gives it CALL_LOG_DEADLINE_SECONDS, CALL_LOG_METRIC_SECONDS, which its pubrules.json doesn't declare yet, so they are left alone"
     And it prints "example-org/two: the SLA block gives it CALL_LOG_DEADLINE_SECONDS, which it doesn't declare yet, so they are left alone"
     And GitHub holds "OTHER" in "example-org/one" as "x" now
 
@@ -344,3 +345,14 @@ Feature: The SLA block of a state file: tiers once, each service's, and what pub
     Then the exit code is 1
     And it prints "example-org/one: its pubrules.json can't be read for its variables, so none is set"
     And it does not print "doesn't declare yet"
+
+  Scenario: A service's heartbeat metric beats at the tightest heartbeat of its senders
+    Given a sound SLA block
+    And its service 'two' is '{"senders": {"a": "idle", "b": "tight", "c": "on-demand"}}'
+    When pubfleet derives from it, offline
+    Then the result's "variables.two.CALL_LOG_METRIC_SECONDS" is "60"
+
+  Scenario: A service with no sender that has a heartbeat gets no metric interval
+    Given a sound SLA block
+    When pubfleet derives from it, offline
+    Then the result's "variables.two" is "{"CALL_LOG_DEADLINE_SECONDS": "120"}"

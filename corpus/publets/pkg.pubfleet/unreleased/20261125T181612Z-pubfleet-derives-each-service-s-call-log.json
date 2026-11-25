@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubfleet derives each service's CALL_LOG_METRIC_SECONDS from its SLA block: the tightest heartbeat_seconds of its senders that have one, the interval of integrations' heartbeat metric"
+}

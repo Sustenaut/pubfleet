@@ -262,7 +262,9 @@ From it pubfleet derives:
   the tier's `uptime_minutes`, from three regions, alarming once two of them fail two
   runs in a row;
 - the GitHub variables: each service's `CALL_LOG_DEADLINE_SECONDS`, the tightest of its
-  senders', and while observability judges silence, its `OBSERVABILITY_SENDERS` (a tier
+  senders', its `CALL_LOG_METRIC_SECONDS`, the tightest `heartbeat_seconds` of its senders
+  that have one (the heartbeat metric's interval, integrations' `heartbeat`), and while
+  observability judges silence, its `OBSERVABILITY_SENDERS` (a tier
   with no heartbeat as `on-demand`). A tier's `heartbeat_seconds` is its Cloud Monitoring
   metric's: the call log's file heartbeat, `CALL_LOG_HEARTBEAT_SECONDS`, a file in storage
   each time, is never derived, and stays a plain variable of the state while there is one.

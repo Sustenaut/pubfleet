@@ -25,7 +25,7 @@ or those named (NAME or OWNER/NAME), or those a repos file lists. It reads throu
 for --apply, write their variables and run their workflows.
 
 A state with an SLA block (pubfleet.sla) also gives repositories the variables derived
-from it: each service's CALL_LOG_DEADLINE_SECONDS, and observability's
+from it: each service's CALL_LOG_DEADLINE_SECONDS and CALL_LOG_METRIC_SECONDS, and observability's
 OBSERVABILITY_SENDERS. The state may not give one of those itself, as the block is where
 it is set. A repository whose pubrules.json doesn't declare a derived one yet is not given
 it, and says so: a service declares them when its deploy passes them to its pods. One

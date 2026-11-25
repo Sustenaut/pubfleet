@@ -16,7 +16,9 @@ pubfleet derives:
   alarming once FAILING_REGIONS of them fail CONSECUTIVE runs in a row, so a down
   address is found within the tier's minutes and one region's or one run's blip is not;
 - the GitHub variables each service's repository is given: CALL_LOG_DEADLINE_SECONDS,
-  and while observability judges silence (the transition), its OBSERVABILITY_SENDERS. A
+  CALL_LOG_METRIC_SECONDS (the heartbeat metric's interval, integrations.heartbeat: the
+  tier's heartbeat_seconds, for a service with a sender that has one), and while
+  observability judges silence (the transition), its OBSERVABILITY_SENDERS. A
   repository's variable holds one number, so it is the tightest of its senders': a sender
   sending sooner than its tier asks costs a little, and never misses its deadline. A
   tier's heartbeat_seconds is its Cloud Monitoring metric's, never the call log's file
@@ -259,6 +261,10 @@ def variables(block: dict, derived: dict) -> dict[str, dict[str, Any]]:
             continue
         values = out.setdefault(service, {})
         values["CALL_LOG_DEADLINE_SECONDS"] = _seconds(min(s["deadline_seconds"] for s in own))
+        # The heartbeat metric's interval (integrations.heartbeat): the tightest heartbeat.
+        beats = [s["heartbeat_seconds"] for s in own if s["heartbeat_seconds"]]
+        if beats:
+            values["CALL_LOG_METRIC_SECONDS"] = _seconds(min(beats))
     senders: dict[str, dict[str, str]] = {}
     for s in derived["senders"]:
         senders.setdefault(s["service"].replace("-", "_"), {})[s["sender"]] = (
