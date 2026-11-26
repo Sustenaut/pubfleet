@@ -308,7 +308,7 @@ bump`'s, and the nightly's.
 [`nightly.yml`](.github/workflows/nightly.yml) runs over the repositories its
 `repos` input marks to govern, called from a control plane's own schedule. It
 has no schedule of its own. Run by hand, it takes the same `repos` input. A
-caller passes the secrets `app-id`, `app-key`, `notify-token` and
+caller passes the secrets `client-id`, `app-key`, `notify-token` and
 `notify-user`, and the `pubfleet` input names the repository whose latest
 release supplies the wheel and the scripts in `.github/nightly/`.
 
@@ -339,8 +339,9 @@ App, which is installed on each owner whose repositories it governs. For each
 repository it mints a token for that repository alone, with contents,
 pull-requests and workflows write and actions read, which expires within the
 hour (`actions/create-github-app-token`). The repository variable
-`NIGHTLY_APP_ID` and secret `NIGHTLY_APP_KEY` (the app's private key) set it
-up when run by hand, and `app-id` and `app-key` when called. Without them it
+`NIGHTLY_APP_CLIENT_ID` (the app's client id) and secret `NIGHTLY_APP_KEY`
+(its private key) set it up when run by hand, and `client-id` and `app-key`
+when called. Without them it
 falls back, with a warning, to a `PUBRULES_BUMP_TOKEN` secret, and with neither
 it only reports.
 

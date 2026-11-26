@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "nightly.yml takes the nightly app's client id: the secret client-id, or run by hand the variable NIGHTLY_APP_CLIENT_ID, in place of app-id and NIGHTLY_APP_ID, and passes it to actions/create-github-app-token as client-id; a caller renames its app-id secret to client-id and passes the client id"
+}
