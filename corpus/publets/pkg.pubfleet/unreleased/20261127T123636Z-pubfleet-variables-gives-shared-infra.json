@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubfleet variables gives shared-infra the variable SLA, the uptime checks (with their addresses, a deploy host's read through gh) and senders the SLA block derives, as pubfleet sla --derive prints them, for its Terraform's var.sla; a shared-infra that doesn't declare it yet is left alone, and the state may not give it beside the block"
+}

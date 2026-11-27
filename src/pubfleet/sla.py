@@ -18,7 +18,9 @@ pubfleet derives:
 - the GitHub variables each service's repository is given: CALL_LOG_DEADLINE_SECONDS,
   CALL_LOG_METRIC_SECONDS (the heartbeat metric's interval, integrations.heartbeat: the
   tier's heartbeat_seconds, for a service with a sender that has one), and while
-  observability judges silence (the transition), its OBSERVABILITY_SENDERS. A
+  observability judges silence (the transition), its OBSERVABILITY_SENDERS; and
+  shared-infra's SLA (MONITORING), the JSON its Terraform's var.sla takes: the
+  uptime checks, with their addresses, and the senders (terraform, below). A
   repository's variable holds one number, so it is the tightest of its senders': a sender
   sending sooner than its tier asks costs a little, and never misses its deadline. A
   tier's heartbeat_seconds is its Cloud Monitoring metric's, never the call log's file
@@ -158,6 +160,10 @@ FREE_EXECUTIONS = 1_000_000
 FREE_BYTES = 150 * 1024 * 1024
 # The repository whose variable lists every sender, while observability still judges silence.
 OBSERVABILITY = "observability"
+# The repository whose Terraform makes the uptime checks and alerts (sla-monitoring.tf),
+# from its variable SLA, which its terraform workflow passes as var.sla (pubhost's tf_vars).
+MONITORING = "shared-infra"
+MONITORING_VARIABLE = "SLA"
 
 
 class SlaError(ValueError):
@@ -305,6 +311,12 @@ def derive(state: dict, replicas: dict[str, int] | None = None, api: Api | None 
     derived["variables"] = variables(block, derived)
     derived["budget"] = budget(derived)
     return {"version": VERSION, **derived}
+
+
+def terraform(derived: dict) -> dict:
+    """What MONITORING's Terraform takes, from `derive`'s result: the uptime checks and the
+    senders, as `--derive` prints them, without the variables and the budget."""
+    return {"version": derived["version"], "uptime": derived["uptime"], "senders": derived["senders"]}
 
 
 def problems(state: dict) -> list[str]:
