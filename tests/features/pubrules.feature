@@ -24,3 +24,19 @@ Feature: pubfleet uses pubrules as a library, through pubrules.api only
     When I run "pubfleet --version"
     Then it succeeds
     And it prints "pubfleet "
+
+  Scenario: The shapes pubfleet was tested on are recorded for every name it imports
+    When I read every import of pubrules in src/pubfleet
+    Then src/pubfleet/pubrules-api.txt records each of them and no other
+    And each recorded shape is the installed pubrules.api's
+
+  Scenario: The installed pubrules is the one pubfleet was tested on
+    Given a scratch directory
+    And the program under test is "pubfleet"
+    When I run "pubfleet pubrules-api --check"
+    Then it succeeds
+    And it prints "api is the one pubfleet was tested on"
+
+  Scenario: A pubrules whose api changed shape, or lost a name, is not the one pubfleet was tested on
+    When the installed pubrules.api is compared with a record where "confined" takes other arguments and "gone" is a name
+    Then the differences are "confined: tested on function(path) -> 'Path', installed is function(path: 'Path | str', what: 'str', also: 'tuple[Path, ...]' = ()) -> 'Path'" and "gone: pubrules.api has no such name"

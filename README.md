@@ -15,6 +15,8 @@ checkout.
     pubfleet state --check | --repos-for board|govern|deploy | --discover [--body PATH] [FILE]
     pubfleet variables --check|--apply [--state FILE] [--repos FILE | REPO...]
     pubfleet freshness [--json] (DIR... | --repos FILE [DIR])
+    pubfleet cycles --repos FILE [--replay FILE] [--record FILE]
+    pubfleet pubrules-api --check
     pubfleet --version
 
 ## Installing
@@ -61,6 +63,19 @@ holds it to, and which the installed pubrules.api must export:
 
 A name pubfleet wants beyond these is a sign the code belongs on one side or
 the other, not a reason to widen the list.
+
+`src/pubfleet/pubrules-api.txt` records the shape of each of these names in the
+pubrules pubfleet is tested with (a function's signature, a class's bases and
+public methods, a pattern's text and flags, a constant's value, as pubrules'
+own `tests/fixtures/api.txt` writes them), and `tests/features/pubrules.feature` holds it to the
+imports and to the locked pubrules.
+
+    pubfleet pubrules-api --check
+
+compares it with the pubrules installed beside pubfleet and fails on a name it
+lacks or a shape that differs. pubrules' suite fails on a change to its api, but
+a release can still carry one deliberately; this is what keeps the nightly from
+running pubfleet on a pubrules it was not tested on.
 
 ## The release board
 
@@ -292,6 +307,30 @@ variable (`--offline` reads no pubrules.json, so every uptime service needs an a
 and `pubfleet sla --budget` the budget alone, failing past a free tier. `--replicas
 SERVICE/SENDER=N` counts a sender run N at once (1 by default).
 
+## Dependency cycles
+
+    pubfleet cycles --repos FILE [--replay FILE] [--record FILE]
+
+reads every repository the repos file names, public and private, through the
+board's github connector (`GITHUB_TOKEN` or `GH_TOKEN`, contents read), builds
+their dependency graph, test time included, and fails on any cycle in it. What a
+repository is: the names its pyproject.toml, Cargo.toml, package.json and
+release.json give it. What it needs: pyproject.toml's `dependencies` and
+`optional-dependencies`; `tests/requirements.txt` and
+`tests/requirements-pubrules.txt`, by name or by release wheel URL; Cargo.toml's
+`dependencies`, `dev-dependencies` and `build-dependencies`, by name or git URL;
+package.json's `dependencies` and `devDependencies`, by name or GitHub URL.
+
+Two kinds of edge are left out, because every repository has them, the tools'
+own included, and counting them would make each a cycle with pubrules: the
+`pubrules` line pubrules' managed `tests/requirements-pubrules.txt` writes, and
+workflow `uses:` pins. A repository whose code imports pubrules declares it in
+pyproject.toml, and that edge counts. `tests/requirements.lock` is read too: a
+listed repository's package it pins that nothing declared explains is reported
+as undeclared, but is not an edge. Each cycle prints as `a -> b -> a`, with the
+file and line of each edge; a cycle, or a file that could not be read, exits 1.
+`--record` and `--replay` work as the board's do.
+
 ## Freshness
 
     pubfleet freshness [--json] DIR...
@@ -326,15 +365,23 @@ and left alone when the night brings nothing new. When its CI fails, the pins
 are tested alone: if they pass, the dependency commits are dropped. Nothing
 merges it: the Sustenaut bot sends a Slack DM when it is green or fails.
 
-**Which pubrules.** The nightly installs the pubrules that the latest pubfleet
-release's `tests/requirements.lock` pins, by hash
-(`.github/nightly/install.sh`), and `pubrules nightly` moves each repository to
-the pubrules it runs as. So a pubrules release reaches governed repositories
-once pubfleet's own nightly has moved its lock to it and a pubfleet release
-carries it: a night later than pubrules' release, and only once pubfleet's
-suite has passed with it. The `pubrules` input, a pubrules release tag such as
-`v0.33.1`, installs that pubrules instead, with a warning, for a fix that must
-go out at once.
+**Which pubrules.** The nightly installs pubrules' latest release, its wheel
+checked against the sha256 GitHub gives for it, when `pubfleet pubrules-api
+--check` says its `pubrules.api` has the names and shapes the latest pubfleet
+release was tested on (see "What pubfleet takes from pubrules"). Otherwise it
+goes back to the pubrules that release's `tests/requirements.lock` pins, by hash,
+with a warning (`.github/nightly/install.sh`). `pubrules nightly` then moves each
+repository to the pubrules it runs as. So a pubrules release reaches governed
+repositories the next night with no pubfleet release in between, unless it
+changed what pubfleet imports; then it waits for a pubfleet release tested on
+it. The `pubrules` input, a pubrules release tag such as `v0.33.1`, installs
+that pubrules instead, unchecked and with a warning, for a fix that must go out
+at once.
+
+**Dependency cycles.** The nightly's `cycles` job runs `pubfleet cycles` on every
+repository the repos input names (see "Dependency cycles" below), reading them
+with the nightly app's token for their owner, contents read only. A cycle fails
+that job alone; the updates go ahead.
 
 It pushes and opens the pull requests as the **Sustenaut nightly** GitHub
 App, which is installed on each owner whose repositories it governs. For each

@@ -5,6 +5,8 @@
     pubfleet state --check | --repos-for board|govern|deploy | --discover [--body PATH] [FILE]
     pubfleet variables --check|--apply [--state FILE] [--repos FILE | REPO...]
     pubfleet freshness [--json] (DIR... | --repos FILE [DIR])
+    pubfleet cycles --repos FILE [--replay FILE] [--record FILE]
+    pubfleet pubrules-api --check
     pubfleet sla --derive|--budget [--state FILE] [--replicas SERVICE/SENDER=N ...] [--offline]
 
 Each reads GitHub through `gh`, with a token the command's help names, and
@@ -81,6 +83,18 @@ def parser() -> argparse.ArgumentParser:
                    help="how many of a sender run at once, for the budget (default 1 each)")
     p.add_argument("--offline", action="store_true",
                    help="read no pubrules.json: every service with an uptime tier needs an address")
+    p = commands.add_parser("cycles", help="fail on a dependency cycle among the listed "
+                                           "repositories, test time included")
+    p.add_argument("--repos", type=Path, metavar="FILE", required=True,
+                   help="the repos file: read every repository it lists")
+    p.add_argument("--replay", type=Path,
+                   help="read recorded responses from this file instead of the network")
+    p.add_argument("--record", type=Path,
+                   help="also keep every response in this file, for --replay")
+    p = commands.add_parser("pubrules-api", help="check the installed pubrules.api is the one "
+                                                 "pubfleet was tested on")
+    p.add_argument("--check", action="store_true", required=True,
+                   help="fail on a name it lacks or a shape that differs")
     p = commands.add_parser("freshness",
                             help="report which pinned pubrules and standard each repository meets")
     p.add_argument("--json", action="store_true", help="JSON rows instead of a Markdown table")
@@ -96,6 +110,14 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911 - one branch pe
         from .sla import run as sla  # noqa: PLC0415
         return sla(confined(args.state, "the state file"), "budget" if args.budget else "derive",
                    args.replicas, args.offline)
+    if args.command == "cycles":
+        from .cycles import run as cycles  # noqa: PLC0415
+        return cycles(confined(args.repos, "the --repos file"),
+                      confined(args.replay, "the --replay file") if args.replay else None,
+                      confined(args.record, "the --record file") if args.record else None)
+    if args.command == "pubrules-api":
+        from .pubrules_api import check  # noqa: PLC0415
+        return check()
     if args.command == "freshness":
         from .freshness import freshness  # noqa: PLC0415
         repos_file = confined(args.repos, "the --repos file") if args.repos else None

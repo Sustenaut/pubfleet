@@ -60,3 +60,35 @@ def installed(imported):
     exported = set(importlib.import_module("pubrules.api").__all__)
     missing = sorted(name for name in imported if name.rpartition(".")[2] not in exported)
     assert not missing, f"pubrules.api does not export {missing}"
+
+
+@then("src/pubfleet/pubrules-api.txt records each of them and no other")
+def recorded_names(imported):
+    from pubfleet.pubrules_api import recorded  # noqa: PLC0415
+    names = {name.rpartition(".")[2] for name in imported}
+    assert set(recorded()) == names, (
+        f"imported but not recorded: {sorted(names - set(recorded()))}; "
+        f"recorded but not imported: {sorted(set(recorded()) - names)}")
+
+
+@then("each recorded shape is the installed pubrules.api's")
+def recorded_shapes():
+    from pubfleet.pubrules_api import differences  # noqa: PLC0415
+    found = differences()
+    assert not found, ("src/pubfleet/pubrules-api.txt is not the installed pubrules.api, which "
+                       "pubfleet is tested on; write the installed shapes there:\n" + "\n".join(found))
+
+
+@when(parsers.parse('the installed pubrules.api is compared with a record where "{changed}" takes '
+                    'other arguments and "{gone}" is a name'), target_fixture="found")
+def compared(changed, gone):
+    from pubfleet.pubrules_api import differences, recorded  # noqa: PLC0415
+    fixture = recorded()
+    fixture[changed] = "function(path) -> 'Path'"
+    fixture[gone] = "constant 1"
+    return differences(fixture)
+
+
+@then(parsers.parse('the differences are "{first}" and "{second}"'))
+def differences_are(found, first, second):
+    assert found == [first, second]
