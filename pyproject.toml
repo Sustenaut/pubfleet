@@ -15,7 +15,7 @@ authors = [{ name = "David Schryer", email = "schryer@gmail.com" }]
 # calls pubrules makes (README, "What pubfleet takes from pubrules"). The floor is
 # the oldest pubrules pubfleet works with; tests/requirements.lock pins the one
 # it is tested with, and nightly.yml installs that one.
-dependencies = ["pubrules>=0.49.1"]
+dependencies = ["pubrules>=0.50.1"]
 
 [project.urls]
 Repository = "https://github.com/Sustenaut/pubfleet"

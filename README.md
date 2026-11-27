@@ -36,26 +36,28 @@ from it. pubrules never imports pubfleet and names nothing of it. pubfleet
 offers no `sustenaut.sync` or `sustenaut.bump` hook, so pubrules never loads it
 into its own process.
 
+It imports only from pubrules.api, the surface pubrules holds steady (pubrules'
+own suite fails when that surface changes), never from pubrules' internal modules.
 These are all the names it takes, which `tests/features/pubrules.feature`
-holds it to, and which the installed pubrules must have:
+holds it to, and which the installed pubrules.api must export:
 
-- the standard's protection: `pubrules.protect.entry`, `pubrules.protect.ruleset`,
-  `pubrules.protect.tag_ruleset`, `pubrules.protect.differences`,
-  `pubrules.protect.on_default_branch`, `pubrules.protect.on_release_tags`,
-  `pubrules.protect.remote`;
-- the GitHub calls: `pubrules.protect.gh`, `pubrules.protect.gh_set`,
-  `pubrules.protect.Api`, `pubrules.protect.ApiError`,
-  `pubrules.protect.remote_config`;
-- the repos file: `pubrules.repos.read`, `pubrules.repos.entries`;
-- the variables block's shape and defaults: `pubrules.variables.BLOCK`,
-  `pubrules.variables.block_problems`, `pubrules.variables.name_problem`,
-  `pubrules.variables.defaults`;
-- the pins the board and freshness read: `pubrules.refs.ANY_OWNER`,
-  `pubrules.refs.AT`, `pubrules.refs.VERSION`, `pubrules.refs.RELEASE_PIN`,
-  `pubrules.freshness.PIN`, `pubrules.freshness.pinned`,
-  `pubrules.nightly.PUBREL_VERSION`;
-- the standard freshness judges by: `pubrules.conform.run`, `pubrules.__version__`;
-- `pubrules.paths.confined`, for the files a command is given.
+- the standard's protection: `pubrules.api.protection_entry`, `pubrules.api.ruleset`,
+  `pubrules.api.tag_ruleset`, `pubrules.api.ruleset_differences`,
+  `pubrules.api.on_default_branch`, `pubrules.api.on_release_tags`,
+  `pubrules.api.remote_protection_entry`;
+- the GitHub calls: `pubrules.api.gh`, `pubrules.api.gh_set`,
+  `pubrules.api.Api`, `pubrules.api.ApiError`,
+  `pubrules.api.remote_config`;
+- the repos file: `pubrules.api.read_repos`, `pubrules.api.repo_entries`;
+- the variables block's shape and defaults: `pubrules.api.VARIABLES_BLOCK`,
+  `pubrules.api.variables_problems`, `pubrules.api.variable_name_problem`,
+  `pubrules.api.variable_defaults`;
+- the pins the board and freshness read: `pubrules.api.ANY_OWNER`,
+  `pubrules.api.AT`, `pubrules.api.VERSION`, `pubrules.api.RELEASE_PIN`,
+  `pubrules.api.PUBRULES_LOCK_PIN`, `pubrules.api.pinned_pubrules`,
+  `pubrules.api.PUBREL_VERSION_INPUT`;
+- the standard freshness judges by: `pubrules.api.conform`, `pubrules.api.version`;
+- `pubrules.api.confined`, for the files a command is given.
 
 A name pubfleet wants beyond these is a sign the code belongs on one side or
 the other, not a reason to widen the list.

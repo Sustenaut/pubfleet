@@ -1,5 +1,5 @@
-"""Steps for pubfleet's use of pubrules: the names it imports, which its README
-lists and the installed pubrules must have."""
+"""Steps for pubfleet's use of pubrules: the names it imports from pubrules.api,
+which its README lists and the installed pubrules.api must export."""
 
 from __future__ import annotations
 
@@ -49,8 +49,14 @@ def none_extra(imported):
     assert not extra, f"listed but not imported: {sorted(extra)}"
 
 
-@then("the installed pubrules has each of them")
+@then("each is from pubrules.api")
+def from_api(imported):
+    elsewhere = sorted(name for name in imported if name.rpartition(".")[0] != "pubrules.api")
+    assert not elsewhere, f"imported from pubrules but not from pubrules.api: {elsewhere}"
+
+
+@then("the installed pubrules.api exports each of them")
 def installed(imported):
-    for name in sorted(imported):
-        module, _, attr = name.rpartition(".")
-        assert hasattr(importlib.import_module(module), attr), f"pubrules has no {name}"
+    exported = set(importlib.import_module("pubrules.api").__all__)
+    missing = sorted(name for name in imported if name.rpartition(".")[2] not in exported)
+    assert not missing, f"pubrules.api does not export {missing}"

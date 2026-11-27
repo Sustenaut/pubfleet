@@ -37,7 +37,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pubrules.protect import Api, ApiError, gh, remote, remote_config
+from pubrules.api import Api, ApiError, gh, remote_config, remote_protection_entry
 
 from . import variables
 
@@ -126,7 +126,7 @@ def on_github(api: Api, owner: str, repos: dict) -> list[str]:
             continue
         if roles["protect"]:
             try:
-                entry = remote(api, slug)
+                entry = remote_protection_entry(api, slug)
             except ValueError as e:
                 out.append(f"{slug} has \"protect\" on, but {e}")
                 continue

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pubrules.repos import entries
+from pubrules.api import repo_entries
 
 from .base import Connector, Fact
 
@@ -18,6 +18,6 @@ class Repos(Connector):
         if not response.ok:
             return Fact(None, (call,), response.message())
         try:
-            return Fact(entries(response.body or b"", path.name), (call,))
+            return Fact(repo_entries(response.body or b"", path.name), (call,))
         except ValueError as e:
             return Fact(None, (call,), str(e))

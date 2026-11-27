@@ -20,7 +20,7 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
-from pubrules import __version__ as pubrules_version
+from pubrules.api import version as pubrules_version
 
 from .. import __version__
 from . import page, rules as grading

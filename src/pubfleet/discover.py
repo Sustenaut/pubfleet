@@ -20,7 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-from pubrules.protect import Api, ApiError, gh, remote_config
+from pubrules.api import Api, ApiError, gh, remote_config
 
 from .state import shape
 
