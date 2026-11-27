@@ -43,7 +43,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable
 
-from pubrules.protect import Api, gh, remote_config
+from pubrules.api import Api, gh, remote_config
 
 BLOCK = "SLA"
 TIER = re.compile(r"[a-z][a-z0-9-]{0,39}")

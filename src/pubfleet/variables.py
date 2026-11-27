@@ -47,10 +47,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pubrules.protect import Api, ApiError, gh, gh_set, remote_config
-from pubrules.repos import read
-from pubrules.variables import BLOCK, block_problems, name_problem
-from pubrules.variables import defaults as defaults_of
+from pubrules.api import VARIABLES_BLOCK as BLOCK
+from pubrules.api import Api, ApiError, gh, gh_set, read_repos, remote_config, variable_defaults, variable_name_problem
+from pubrules.api import variables_problems
 
 PAGE = 30
 
@@ -59,7 +58,7 @@ def value_problems(values: Any) -> list[str]:
     """What is wrong with one repository's variables in a state file: one phrase each."""
     if not isinstance(values, dict):
         return ["its variables must be an object, from each name to its value"]
-    out = [p for n in values if (p := name_problem(n))]
+    out = [p for n in values if (p := variable_name_problem(n))]
     for name, value in values.items():
         if value is None or value == "":
             out.append(f"{name} has no value; GitHub keeps no empty variable")
@@ -135,7 +134,7 @@ def declared(api: Api, slug: str) -> dict:
     if not isinstance(config, dict) or BLOCK not in config:
         raise Undeclared(f"its pubrules.json declares no variables; add "
                          f'"{BLOCK}": {{"names": [...]}} to it')
-    if bad := block_problems(config[BLOCK]):
+    if bad := variables_problems(config[BLOCK]):
         raise ValueError(f"its pubrules.json's {BLOCK} block: {'; '.join(bad)}")
     return config[BLOCK]
 
@@ -170,7 +169,7 @@ def chosen(state: dict, names: list[str], repos_file: Path | None) -> list[str]:
     """The repositories to act on, by name within the state's owner."""
     owner = state["owner"]
     if repos_file:
-        names = [e["repo"] for e in read(repos_file, "variables")]
+        names = [e["repo"] for e in read_repos(repos_file, "variables")]
     has = wanted(state)
     if not names:
         return [n for n in state["repos"] if n in has]
@@ -219,7 +218,7 @@ def one(api: Api, slug: str, values: dict, apply: bool, setter,
         return [f"{slug}: its variables can't be read ({e})"], False, True
     # GitHub holding a variable empty is as unset: a deploy renders an unset one so.
     have = {n: v for n, v in have.items() if v != ""}
-    defaults = defaults_of(block)
+    defaults = variable_defaults(block)
     if redundant := sorted(n for n, v in values.items() if is_default(v, defaults, n)):
         notes.append(f"{slug}: the state gives {', '.join(redundant)} {'its' if len(redundant) == 1 else 'their'} "
                      f"default, which leaving {'it' if len(redundant) == 1 else 'them'} unset gives too "

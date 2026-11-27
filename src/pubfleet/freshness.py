@@ -18,15 +18,13 @@ import os
 import sys
 from pathlib import Path
 
-from pubrules import __version__
-from pubrules.conform import run as conform
-from pubrules.freshness import pinned
-from pubrules.repos import read
+from pubrules.api import conform, pinned_pubrules, read_repos
+from pubrules.api import version as pubrules_version
 
 
 def row(repo: Path) -> dict:
     config_path = repo / "pubrules.json"
-    out = {"repo": repo.name, "pinned": pinned(repo) or "-", "latest": __version__}
+    out = {"repo": repo.name, "pinned": pinned_pubrules(repo) or "-", "latest": pubrules_version}
     if not config_path.is_file():
         return {**out, "conforms": "no pubrules.json", "exceptions": []}
     config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -46,7 +44,7 @@ def row(repo: Path) -> dict:
 
 
 def table(rows: list[dict]) -> str:
-    lines = [f"Every pub* repository against pubrules {__version__}.", "",
+    lines = [f"Every pub* repository against pubrules {pubrules_version}.", "",
              "| Repository | Pins pubrules | Current | Conforms to the latest standard | Open exceptions |",
              "|---|---|---|---|---|"]
     for r in rows:
@@ -59,13 +57,13 @@ def table(rows: list[dict]) -> str:
 def governed_rows(repos_file: Path, where: Path) -> list[dict]:
     """A row for each repository the repos file governs, checked out or not."""
     rows = []
-    for entry in read(repos_file, "freshness"):
+    for entry in read_repos(repos_file, "freshness"):
         if not entry["govern"]:
             continue
         name = entry["repo"].split("/", 1)[1]
         checkout = where / name
         rows.append(row(checkout.resolve()) if checkout.is_dir() else
-                    {"repo": name, "pinned": "-", "latest": __version__,
+                    {"repo": name, "pinned": "-", "latest": pubrules_version,
                      "conforms": "not checked out", "exceptions": []})
     return rows
 

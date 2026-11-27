@@ -17,7 +17,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from pubrules.paths import confined
+from pubrules.api import confined
 
 from . import __version__
 

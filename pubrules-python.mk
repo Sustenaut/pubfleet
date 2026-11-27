@@ -1,4 +1,4 @@
-# Managed by pubrules 0.49.1: `pubrules sync` rewrites this file, and
+# Managed by pubrules 0.50.1: `pubrules sync` rewrites this file, and
 # `pubrules sync --check` fails when it differs. Include it from the Makefile,
 # and set the variables below there, before the include; targets of your own
 # go there too. It is the same in every Python package, so a rule set here

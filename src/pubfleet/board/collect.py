@@ -14,11 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pubrules.protect import (differences as ruleset_differences, entry, on_default_branch, on_release_tags,
-                            ruleset, tag_ruleset)
-from pubrules.freshness import PIN
-from pubrules.nightly import PUBREL_VERSION
-from pubrules.refs import ANY_OWNER, AT, RELEASE_PIN, VERSION
+from pubrules.api import (ANY_OWNER, AT, PUBREL_VERSION_INPUT, PUBRULES_LOCK_PIN, RELEASE_PIN, VERSION,
+                          on_default_branch, on_release_tags, protection_entry, ruleset, ruleset_differences,
+                          tag_ruleset)
 
 from .connectors.actions import Actions
 from .connectors.base import Fact
@@ -136,10 +134,10 @@ class Gatherer:
         """The pubrules and pubrel versions the repository pins, and whether
         it is integrated with each."""
         workflows = "\n".join(t.value for t in texts if t.value)
-        pubrules = sorted(set(PIN.findall(lock.value or ""))
+        pubrules = sorted(set(PUBRULES_LOCK_PIN.findall(lock.value or ""))
                         | {m["version"] for m in PUBRULES_PIN.finditer(workflows)})
         pubrel = {m["version"] for m in RELEASE_PIN.finditer(workflows)}
-        pubrel |= {m["version"] for m in PUBREL_VERSION.finditer(workflows)}
+        pubrel |= {m["version"] for m in PUBREL_VERSION_INPUT.finditer(workflows)}
         declared = ((config or {}).get("ci") or {}).get("release") if config else None
         if isinstance(declared, dict) and isinstance(declared.get("pubrel"), str):
             pubrel.add(declared["pubrel"].removeprefix("v"))
@@ -227,7 +225,7 @@ class Gatherer:
         if not item.get("protect", True):
             return Fact({"differences": [], "limit": False}, item["sources"])
         try:
-            wanted = entry(repo, config, "its pubrules.json")
+            wanted = protection_entry(repo, config, "its pubrules.json")
         except ValueError as e:
             return Fact({"differences": [str(e)], "limit": False}, raw.sources)
         found = self.c.github.rulesets(repo)
