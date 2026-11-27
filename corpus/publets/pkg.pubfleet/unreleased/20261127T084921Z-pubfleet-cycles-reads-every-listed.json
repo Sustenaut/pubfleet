@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "pubfleet cycles reads every listed repository's pyproject.toml, Cargo.toml, package.json, release.json and test requirements through the board's github connector and fails on a dependency cycle among them, test time included; pubrules' managed toolchain line and workflow pins are not edges, and a locked package nothing declared needs is reported as undeclared. The reusable nightly.yml runs it in a cycles job on every repository its repos input names, with the nightly app's token for the owner, contents read only"
+}

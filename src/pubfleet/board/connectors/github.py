@@ -73,6 +73,10 @@ class GitHub(Connector):
     def requirements_lock(self, repo: str) -> Fact:
         return self._file("requirements_lock", repo, "tests/requirements.lock")
 
+    def dependency_file(self, repo: str, path: str) -> Fact:
+        """A file that says what the repository is or needs (pubfleet cycles)."""
+        return self._file("dependency_file", repo, path)
+
     def workflow(self, repo: str, name: str) -> Fact:
         return self._file("workflow", repo, f".github/workflows/{name}")
 

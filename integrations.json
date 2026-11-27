@@ -34,6 +34,7 @@
     {
       "plugin": "github.repo-ops",
       "paths": [
+        ".github/nightly/install.sh",
         ".github/nightly/update.sh",
         ".github/workflows/nightly.yml",
         ".github/workflows/wheel.yml",

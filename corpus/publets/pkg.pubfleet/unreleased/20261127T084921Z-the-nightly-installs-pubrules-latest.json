@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "The nightly installs pubrules' latest release, its wheel checked against GitHub's sha256, when pubfleet pubrules-api --check finds its pubrules.api has the names and shapes pubfleet was tested on (src/pubfleet/pubrules-api.txt), and otherwise the pubrules pubfleet's lock pins, with a warning; a pubrules release no longer waits for a pubfleet release to reach governed repositories"
+}

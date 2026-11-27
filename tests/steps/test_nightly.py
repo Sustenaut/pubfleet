@@ -133,7 +133,7 @@ def same_release(workflow):
     assert '$GITHUB_REPOSITORY' not in "".join(s.get("run", "") for s in _steps(workflow))
 
 
-@then("the pubrules it installs is the one that release is tested with, unless the pubrules input names one")
+@then("the pubrules it installs is install.sh's choice, unless the pubrules input names one")
 def pubrules_input(workflow):
     on = workflow["data"][True]
     for trigger in ("workflow_call", "workflow_dispatch"):
@@ -169,3 +169,28 @@ def update_script():
 @then("it runs not-backwards.sh before pubrules nightly")
 def guard_first(script):
     assert script.index("not-backwards.sh") < script.index("pubrules nightly")
+
+
+@then("its cycles job runs pubfleet cycles on the repos input")
+def cycles_job(workflow):
+    steps = workflow["data"]["jobs"]["cycles"]["steps"]
+    run = next(s for s in steps if "pubfleet cycles" in s.get("run", ""))
+    assert "pubfleet cycles --repos repos.json" in run["run"]
+    assert run["env"]["REPOS"] == "${{ inputs.repos }}"
+    assert any("pubfleet/.github/nightly/install.sh" in s.get("run", "") for s in steps)
+
+
+@then("the cycles job reads with the nightly app's token for the owner, contents read only")
+def cycles_token(workflow):
+    steps = workflow["data"]["jobs"]["cycles"]["steps"]
+    app = next(s for s in steps if s.get("id") == "app")
+    permissions = {k: v for k, v in app["with"].items() if k.startswith("permission-")}
+    assert permissions == {"permission-contents": "read"}
+    assert "repositories" not in app["with"]
+    assert app["with"]["owner"] == "${{ steps.owner.outputs.owner }}"
+
+
+@then("the update job does not wait for the cycles job")
+def update_apart(workflow):
+    needs = workflow["data"]["jobs"]["update"]["needs"]
+    assert "cycles" not in ([needs] if isinstance(needs, str) else needs)

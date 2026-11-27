@@ -27,6 +27,7 @@ pubfleet = "pubfleet.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
+"pubfleet" = ["pubrules-api.txt"]
 "pubfleet.board" = ["rules.json"]
 
 # `make functional` measures the suite, the `pubfleet` processes it starts

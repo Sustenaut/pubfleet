@@ -2,9 +2,10 @@ Feature: The nightly keeps every governed repository current, through a pull req
   nightly.yml checks out each repository the repos input governs and runs
   `pubrules nightly` there (.github/nightly/update.sh), which commits the moved
   pins and the updates and writes the pull request's body. The workflow keeps
-  one pull request per repository and never merges it. It installs the pubrules
-  the latest pubfleet release is tested with (.github/nightly/install.sh), so
-  each repository moves to that pubrules.
+  one pull request per repository and never merges it. It installs pubrules'
+  latest release when its api is the one pubfleet was tested on, else the one the
+  latest pubfleet release locks (.github/nightly/install.sh), so each repository
+  moves to that pubrules.
 
   Background:
     Given a scratch directory
@@ -30,7 +31,7 @@ Feature: The nightly keeps every governed repository current, through a pull req
     And a repository it can't read for the report doesn't stop the others
     And only what the repos input governs gets a pull request
     And it takes pubfleet's script and wheel from the same latest release, whichever repository calls it
-    And the pubrules it installs is the one that release is tested with, unless the pubrules input names one
+    And the pubrules it installs is install.sh's choice, unless the pubrules input names one
 
   Scenario: The nightly takes pubrel's latest release when crates.io has it
     Given a fake "crates" service
@@ -101,10 +102,67 @@ Feature: The nightly keeps every governed repository current, through a pull req
     When I parse the workflow "nightly.yml"
     Then it chooses pubrel with pubrel-version.sh, and installs that version
 
-  Scenario: The nightly installs the pubrules its pubfleet release's lock pins, by hash
+  Scenario: The nightly installs pubrules' latest release when its api is the one pubfleet was tested on
     Given a stand-in "python"
     And a stand-in "pubfleet"
     And a stand-in "pubrules"
+    And a stand-in "gh" that answers in turn:
+      | args                                                                  | stdout       |
+      | release view --repo Sustenaut/pubrules --json tagName --jq .tagName   | v0.51.0      |
+      | release view v0.51.0 --repo Sustenaut/pubrules --json assets --jq *   | sha256:abc12 |
+      | release download v0.51.0 --repo Sustenaut/pubrules --pattern pubrules-0.51.0-py3-none-any.whl --dir * |  |
+    And a stand-in "sha256sum" that prints "abc12  pubrules-0.51.0-py3-none-any.whl"
+    And the environment does not set "PUBRULES_TAG"
+    And a file ".github/nightly/install.sh" copied from ".github/nightly/install.sh"
+    And the file ".github/nightly/install.sh" is executable
+    When I run ".github/nightly/install.sh v0.1.0"
+    Then it succeeds
+    And "python" was run, in turn, with arguments matching:
+      """
+      -m pip install --quiet --only-binary :all: --require-hashes -r */scratch/tests/requirements.lock
+      -m pip install --quiet --no-deps https://github.com/Sustenaut/pubfleet/releases/download/v0.1.0/pubfleet-0.1.0-py3-none-any.whl
+      -m pip install --quiet --no-deps */pubrules-0.51.0-py3-none-any.whl
+      """
+    And "pubfleet" was run with "pubrules-api --check"
+    And it does not print "::warning::"
+
+  Scenario: A latest pubrules whose api changed goes back to the one pubfleet's lock pins, with a warning
+    Given a stand-in "python"
+    And a stand-in "pubfleet" that answers in turn:
+      | args                 | exit | stderr                                       |
+      | pubrules-api --check | 1    | confined: tested on one shape, installed is another |
+      | --version            | 0    |                                              |
+    And a stand-in "pubrules"
+    And a stand-in "gh" that answers in turn:
+      | args                                                                  | stdout       |
+      | release view --repo Sustenaut/pubrules --json tagName --jq .tagName   | v0.51.0      |
+      | release view v0.51.0 --repo Sustenaut/pubrules --json assets --jq *   | sha256:abc12 |
+      | release download *                                                     |              |
+    And a stand-in "sha256sum" that prints "abc12  pubrules-0.51.0-py3-none-any.whl"
+    And the environment does not set "PUBRULES_TAG"
+    And a file ".github/nightly/install.sh" copied from ".github/nightly/install.sh"
+    And the file ".github/nightly/install.sh" is executable
+    When I run ".github/nightly/install.sh v0.1.0"
+    Then it succeeds
+    And "python" was run, in turn, with arguments matching:
+      """
+      -m pip install --quiet --only-binary :all: --require-hashes -r */scratch/tests/requirements.lock
+      -m pip install --quiet --no-deps https://github.com/Sustenaut/pubfleet/releases/download/v0.1.0/pubfleet-0.1.0-py3-none-any.whl
+      -m pip install --quiet --no-deps */pubrules-0.51.0-py3-none-any.whl
+      -m pip install --quiet --force-reinstall --no-deps --only-binary :all: --require-hashes -r */scratch/tests/requirements.lock
+      """
+    And it prints "::warning::pubrules v0.51.0 changed what pubfleet imports from pubrules.api"
+
+  Scenario: A latest pubrules wheel whose sha256 differs from GitHub's is not installed
+    Given a stand-in "python"
+    And a stand-in "pubfleet"
+    And a stand-in "pubrules"
+    And a stand-in "gh" that answers in turn:
+      | args                                                                  | stdout       |
+      | release view --repo Sustenaut/pubrules --json tagName --jq .tagName   | v0.51.0      |
+      | release view v0.51.0 --repo Sustenaut/pubrules --json assets --jq *   | sha256:abc12 |
+      | release download *                                                     |              |
+    And a stand-in "sha256sum" that prints "ffff0  pubrules-0.51.0-py3-none-any.whl"
     And the environment does not set "PUBRULES_TAG"
     And a file ".github/nightly/install.sh" copied from ".github/nightly/install.sh"
     And the file ".github/nightly/install.sh" is executable
@@ -115,7 +173,7 @@ Feature: The nightly keeps every governed repository current, through a pull req
       -m pip install --quiet --only-binary :all: --require-hashes -r */scratch/tests/requirements.lock
       -m pip install --quiet --no-deps https://github.com/Sustenaut/pubfleet/releases/download/v0.1.0/pubfleet-0.1.0-py3-none-any.whl
       """
-    And it does not print "::warning::"
+    And it prints "could not be read and checked against its sha256"
 
   Scenario: The pubrules input moves the repositories to that pubrules instead, with a warning
     Given a stand-in "python"
@@ -195,3 +253,9 @@ Feature: The nightly keeps every governed repository current, through a pull req
   Scenario: The update script checks before it moves anything
     When I read the nightly's update script
     Then it runs not-backwards.sh before pubrules nightly
+
+  Scenario: The nightly checks every repository it is given for dependency cycles, apart from the updates
+    When I parse the workflow "nightly.yml"
+    Then its cycles job runs pubfleet cycles on the repos input
+    And the cycles job reads with the nightly app's token for the owner, contents read only
+    And the update job does not wait for the cycles job
