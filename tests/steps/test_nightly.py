@@ -60,11 +60,12 @@ def _steps(workflow):
 def app_token(workflow):
     app = next(s for s in _steps(workflow) if s.get("id") == "app")
     assert re.fullmatch(r"actions/create-github-app-token@[0-9a-f]{40}", app["uses"])
-    assert app["if"] == "env.APP_ID != ''"
+    assert app["if"] == "env.CLIENT_ID != ''"
     update_job = workflow["data"]["jobs"]["update"]
-    assert update_job["env"]["APP_ID"] == "${{ secrets.app-id || vars.NIGHTLY_APP_ID }}"
+    assert update_job["env"]["CLIENT_ID"] == "${{ secrets.client-id || vars.NIGHTLY_APP_CLIENT_ID }}"
     given = app["with"]
-    assert given["app-id"] == "${{ env.APP_ID }}"
+    assert given["client-id"] == "${{ env.CLIENT_ID }}"
+    assert "app-id" not in given
     assert given["private-key"] == "${{ secrets.app-key || secrets.NIGHTLY_APP_KEY }}"
     assert given["owner"] == "${{ steps.where.outputs.owner }}"
     assert given["repositories"] == "${{ steps.where.outputs.name }}"
@@ -84,7 +85,7 @@ def app_permissions(workflow):
 def fallback(workflow):
     token = next(s for s in _steps(workflow) if s.get("id") == "token")
     assert token["env"]["BUMP_TOKEN"] == "${{ secrets.PUBRULES_BUMP_TOKEN }}"
-    assert "::warning::No app-id or NIGHTLY_APP_ID" in token["run"]
+    assert "::warning::No client-id or NIGHTLY_APP_CLIENT_ID" in token["run"]
     assert token["run"].index("APP_TOKEN") < token["run"].index("BUMP_TOKEN")
     assert "GH_TOKEN" not in workflow["data"]["jobs"]["update"].get("env", {})
 

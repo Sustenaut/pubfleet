@@ -25,7 +25,7 @@ Feature: The nightly keeps every governed repository current, through a pull req
 
   Scenario: A control plane calls the nightly with a repos input and neutral secrets
     When I parse the workflow "nightly.yml"
-    Then it can be called with the input "repos" and the secrets "app-id, app-key, notify-token, notify-user"
+    Then it can be called with the input "repos" and the secrets "client-id, app-key, notify-token, notify-user"
     And run by hand it takes the same repos input
     And a repository it can't read for the report doesn't stop the others
     And only what the repos input governs gets a pull request

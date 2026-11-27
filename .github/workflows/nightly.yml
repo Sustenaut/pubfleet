@@ -2,7 +2,7 @@
 # its own: a control plane calls it on one, or someone runs it by hand with that input.
 #
 # Reusable: a control plane calls this with `repos`, the repos file itself as
-# JSON ({"repositories": [{"repo", "govern"}]}), and the secrets app-id, app-key,
+# JSON ({"repositories": [{"repo", "govern"}]}), and the secrets client-id, app-key,
 # notify-token and notify-user. It takes pubfleet's wheel and the update script
 # from the `pubfleet` input's latest release, whichever repository calls it,
 # and the pubrules that release's tests/requirements.lock pins
@@ -41,12 +41,12 @@
 # dropped when that passes. Nothing merges it: the Sustenaut bot DMs on
 # Slack when it is green or fails.
 #
-# It pushes and opens pull requests as a GitHub App: the secrets app-id and
-# app-key (its private key), or run by hand the variable
-# NIGHTLY_APP_ID and the secret NIGHTLY_APP_KEY, give, for each governed repository, a token for that repository
+# It pushes and opens pull requests as a GitHub App: the secrets client-id
+# (the app's client id) and app-key (its private key), or run by hand the
+# variable NIGHTLY_APP_CLIENT_ID and the secret NIGHTLY_APP_KEY, give, for each governed repository, a token for that repository
 # alone, with only contents, pull-requests and workflows write (and
 # actions read, to wait for its CI), that expires within the hour. The app is installed on every owner whose
-# repositories the input marks. Without NIGHTLY_APP_ID it falls back,
+# repositories the input marks. Without NIGHTLY_APP_CLIENT_ID it falls back,
 # with a warning, to PUBRULES_BUMP_TOKEN, a token that may push branches and
 # open pull requests there; with neither, the job only reports.
 # The secrets notify-token (a Slack bot's, chat:write) and notify-user, whom it
@@ -79,9 +79,9 @@ on:
         default: ''
         description: 'A pubrules release tag, such as v0.33.1, to move governed repositories to instead of the one that pubfleet release is tested with'
     secrets:
-      app-id:
+      client-id:
         required: false
-        description: The GitHub App that pushes and opens the pull requests
+        description: The client id of the GitHub App that pushes and opens the pull requests
       app-key:
         required: false
         description: Its private key
@@ -141,18 +141,18 @@ jobs:
         repo: ${{ fromJSON(needs.report.outputs.repos) }}
     env:
       REPO: '${{ matrix.repo }}'
-      APP_ID: '${{ secrets.app-id || vars.NIGHTLY_APP_ID }}'
+      CLIENT_ID: '${{ secrets.client-id || vars.NIGHTLY_APP_CLIENT_ID }}'
     steps:
       # The app's token covers this repository alone: its owner and name.
       - id: where
         run: |
           echo "owner=${REPO%%/*}" >> "$GITHUB_OUTPUT"
           echo "name=${REPO#*/}" >> "$GITHUB_OUTPUT"
-      - if: env.APP_ID != ''
+      - if: env.CLIENT_ID != ''
         id: app
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          app-id: '${{ env.APP_ID }}'
+          client-id: '${{ env.CLIENT_ID }}'
           private-key: '${{ secrets.app-key || secrets.NIGHTLY_APP_KEY }}'
           owner: '${{ steps.where.outputs.owner }}'
           repositories: '${{ steps.where.outputs.name }}'
@@ -166,10 +166,10 @@ jobs:
             echo "::add-mask::$APP_TOKEN"
             echo "token=$APP_TOKEN" >> "$GITHUB_OUTPUT"
           elif [ -n "$BUMP_TOKEN" ]; then
-            echo "::warning::No app-id or NIGHTLY_APP_ID: falling back to PUBRULES_BUMP_TOKEN for $REPO. Set up the Sustenaut nightly app (README, The nightly)."
+            echo "::warning::No client-id or NIGHTLY_APP_CLIENT_ID: falling back to PUBRULES_BUMP_TOKEN for $REPO. Set up the Sustenaut nightly app (README, The nightly)."
             echo "token=$BUMP_TOKEN" >> "$GITHUB_OUTPUT"
           else
-            echo "No app-id, NIGHTLY_APP_ID or PUBRULES_BUMP_TOKEN: reporting only, no pull request for $REPO." >> "$GITHUB_STEP_SUMMARY"
+            echo "No client-id, NIGHTLY_APP_CLIENT_ID or PUBRULES_BUMP_TOKEN: reporting only, no pull request for $REPO." >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "present=$([ -n "$APP_TOKEN$BUMP_TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
         env:
