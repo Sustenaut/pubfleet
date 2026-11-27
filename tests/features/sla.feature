@@ -307,6 +307,41 @@ Feature: The SLA block of a state file: tiers once, each service's, and what pub
     And GitHub holds "CALL_LOG_DEADLINE_SECONDS" in "example-org/two" as "120" now
     And GitHub holds "OBSERVABILITY_SENDERS" in "example-org/observability" as "{"one":{"app":"tight","job":"idle"},"two":{"plan":"on-demand"}}" now
 
+  Scenario: shared-infra is given SLA: the uptime checks and senders, compact, for its Terraform
+    Given a sound SLA block
+    And the state file holds it, with the repository "shared-infra"
+    And "example-org/one" declares the variables ["CALL_LOG_DEADLINE_SECONDS", "CALL_LOG_METRIC_SECONDS"]
+    And "example-org/two" declares the variables ["CALL_LOG_DEADLINE_SECONDS"]
+    And "example-org/observability" declares the variables ["OBSERVABILITY_SENDERS"]
+    And "example-org/shared-infra" declares the variables ["SLA"]
+    When I run "pubfleet variables --apply shared-infra"
+    Then it succeeds
+    And GitHub holds "SLA" in "example-org/shared-infra" as the uptime checks and senders the block derives, now
+
+  Scenario: shared-infra's SLA has the address an uptime service's deploy host gives
+    Given a sound SLA block
+    And its service 'one' has no address
+    And the state file holds it, with the repository "shared-infra"
+    And "example-org/one" deploys to the host "one.example.eu"
+    And "example-org/shared-infra" declares the variables ["SLA"]
+    When I run "pubfleet variables --apply shared-infra"
+    Then it succeeds
+    And GitHub holds "SLA" in "example-org/shared-infra" with the uptime address "https://one.example.eu/", now
+
+  Scenario: shared-infra not declaring SLA yet is left alone, and fails nothing
+    Given a sound SLA block
+    And the state file holds it, with the repository "shared-infra"
+    And "example-org/shared-infra" has the pubrules.json "{"kind": "utility"}"
+    When I run "pubfleet variables --apply shared-infra"
+    Then it succeeds
+    And it prints "example-org/shared-infra: the SLA block gives it SLA, which it doesn't declare yet, so they are left alone"
+
+  Scenario: The state check refuses an SLA the state gives shared-infra itself
+    Given a sound SLA block
+    And the state file holds it, with the repository "shared-infra", which it gives the variables '{"SLA": "{}"}'
+    When pubfleet checks the state's shape
+    Then one problem is "shared-infra: its variables give SLA, which the SLA block sets: drop them here"
+
   Scenario: A derived variable a repository doesn't declare yet is left alone, and fails nothing
     Given a sound SLA block
     And the state file holds it, and gives "one" the variables '{"OTHER": "x"}'

@@ -291,7 +291,10 @@ From it pubfleet derives:
   senders', its `CALL_LOG_METRIC_SECONDS`, the tightest `heartbeat_seconds` of its senders
   that have one (the heartbeat metric's interval, integrations' `heartbeat`), and while
   observability judges silence, its `OBSERVABILITY_SENDERS` (a tier
-  with no heartbeat as `on-demand`). A tier's `heartbeat_seconds` is its Cloud Monitoring
+  with no heartbeat as `on-demand`), and shared-infra's `SLA`: the uptime checks, with
+  their addresses, and the senders, as `--derive` prints them (its `version`, `uptime`
+  and `senders`), which shared-infra's terraform workflow passes as `var.sla` (pubhost's
+  `tf_vars`). A tier's `heartbeat_seconds` is its Cloud Monitoring
   metric's: the call log's file heartbeat, `CALL_LOG_HEARTBEAT_SECONDS`, a file in storage
   each time, is never derived, and stays a plain variable of the state while there is one.
   `pubfleet variables` gives them as it gives the state's own; the state may not set one

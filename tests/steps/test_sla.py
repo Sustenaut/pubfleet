@@ -103,6 +103,22 @@ def state_file_without(repo, block, name):
     return state
 
 
+@given(parsers.parse('the state file holds it, with the repository "{name}"'), target_fixture="state")
+def state_file_with_repo(repo, block, name):
+    state = state_of(block, repos=["one", "two", "observability", *block["services"], name])
+    (repo / "state.json").write_text(json.dumps(state))
+    return state
+
+
+@given(parsers.parse("the state file holds it, with the repository \"{name}\", which it gives the variables '{text}'"),
+       target_fixture="state")
+def state_file_with_repo_variables(repo, block, name, text):
+    state = state_of(block, repos=["one", "two", "observability", *block["services"], name],
+                     variables={name: json.loads(text)})
+    (repo / "state.json").write_text(json.dumps(state))
+    return state
+
+
 @given(parsers.parse('"{slug}" deploys to the host "{host}"'))
 def deploys_to(github, slug, host):  # noqa: F811 - the fixture of test_variables.py
     _config(github, slug, {"kind": "service", "deploy": {"host": host}})
@@ -191,3 +207,16 @@ def uptime_is(pubtest_ctx, service, docstring):
     assert pubtest_ctx.refused is None, pubtest_ctx.refused
     (row,) = [u for u in pubtest_ctx.result["uptime"] if u["service"] == service]
     assert row == json.loads(docstring), row
+
+
+@then(parsers.parse('GitHub holds "{name}" in "{slug}" as the uptime checks and senders the block derives, now'))
+def holds_derived(github, state, name, slug, uptime_address=None):  # noqa: F811
+    held = json.loads(json.loads(github.read_text())["variables"][slug][name])
+    assert held == sla.terraform(sla.derive(state, api=None)), held
+    assert set(held) == {"version", "uptime", "senders"}, held
+
+
+@then(parsers.parse('GitHub holds "{name}" in "{slug}" with the uptime address "{address}", now'))
+def holds_address(github, name, slug, address):  # noqa: F811
+    held = json.loads(json.loads(github.read_text())["variables"][slug][name])
+    assert [u["address"] for u in held["uptime"]] == [address], held

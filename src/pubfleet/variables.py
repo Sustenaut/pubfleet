@@ -25,8 +25,10 @@ or those named (NAME or OWNER/NAME), or those a repos file lists. It reads throu
 for --apply, write their variables and run their workflows.
 
 A state with an SLA block (pubfleet.sla) also gives repositories the variables derived
-from it: each service's CALL_LOG_DEADLINE_SECONDS and CALL_LOG_METRIC_SECONDS, and observability's
-OBSERVABILITY_SENDERS. The state may not give one of those itself, as the block is where
+from it: each service's CALL_LOG_DEADLINE_SECONDS and CALL_LOG_METRIC_SECONDS, observability's
+OBSERVABILITY_SENDERS, and shared-infra's SLA, what `pubfleet sla --derive` prints of the
+uptime checks and senders, for its Terraform (an uptime address from a service's deploy
+host is read through `gh`). The state may not give one of those itself, as the block is where
 it is set. A repository whose pubrules.json doesn't declare a derived one yet is not given
 it, and says so: a service declares them when its deploy passes them to its pods. One
 whose pubrules.json can't be read fails, as for the state's own variables.
@@ -143,20 +145,27 @@ def undeclared(block: dict, values: dict) -> list[str]:
     return [n for n in values if n not in block["names"]]
 
 
-def derived(state: dict) -> dict[str, dict[str, Any]]:
-    """The variables the state's SLA block gives each repository, by name."""
+def derived(state: dict, api: Api | None = None) -> dict[str, dict[str, Any]]:
+    """The variables the state's SLA block gives each repository, by name. Without `api`,
+    the names alone are sure: shared-infra's SLA, which may need a service's deploy host
+    read, is then None."""
     from . import sla  # noqa: PLC0415 - sla reads pubrules' block, which state checks first
 
     if sla.BLOCK not in state:
         return {}
     block = sla.read(state[sla.BLOCK])
-    return sla.variables(block, sla.numbers(block))
+    out = sla.variables(block, sla.numbers(block))
+    if block.get("services"):
+        value = sla.terraform(sla.derive(state, api=api)) if api is not None else None
+        out.setdefault(sla.MONITORING, {})[sla.MONITORING_VARIABLE] = value
+    return out
 
 
-def wanted(state: dict) -> dict[str, tuple[dict[str, Any], set[str]]]:
-    """Each repository's variables, the state's and the SLA block's, with the names derived."""
+def wanted(state: dict, api: Api | None = None) -> dict[str, tuple[dict[str, Any], set[str]]]:
+    """Each repository's variables, the state's and the SLA block's, with the names derived.
+    Without `api`, for the names: a value that needs GitHub read is None (derived)."""
     out: dict[str, tuple[dict[str, Any], set[str]]] = {}
-    from_sla = derived(state)
+    from_sla = derived(state, api)
     for name, roles in state["repos"].items():
         given = dict(roles.get(BLOCK) or {})
         extra = from_sla.get(name, {})
@@ -263,7 +272,11 @@ def run(path: Path, names: list[str], apply: bool, repos_file: Path | None = Non
     if not repos:
         print(f"{path}: no repository of {state['owner']} has variables")
         return 0
-    has = wanted(state)
+    from .sla import SlaError  # noqa: PLC0415
+    try:
+        has = wanted(state, api)
+    except SlaError as e:
+        sys.exit(f"pubfleet variables: {path}: its SLA block: {e}")
     differs = failed = False
     for name in repos:
         values, names_derived = has[name]
