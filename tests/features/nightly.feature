@@ -175,6 +175,23 @@ Feature: The nightly keeps every governed repository current, through a pull req
       """
     And it prints "could not be read and checked against its sha256"
 
+  Scenario: When GitHub doesn't say which pubrules is latest, the nightly stays on the lock's
+    Given a stand-in "python"
+    And a stand-in "pubfleet"
+    And a stand-in "pubrules"
+    And a stand-in "gh" that fails, saying "HTTP 502"
+    And the environment does not set "PUBRULES_TAG"
+    And a file ".github/nightly/install.sh" copied from ".github/nightly/install.sh"
+    And the file ".github/nightly/install.sh" is executable
+    When I run ".github/nightly/install.sh v0.1.0"
+    Then it succeeds
+    And "python" was run, in turn, with arguments matching:
+      """
+      -m pip install --quiet --only-binary :all: --require-hashes -r */scratch/tests/requirements.lock
+      -m pip install --quiet --no-deps https://github.com/Sustenaut/pubfleet/releases/download/v0.1.0/pubfleet-0.1.0-py3-none-any.whl
+      """
+    And it prints "staying on the pubrules pubfleet v0.1.0 is tested with"
+
   Scenario: The pubrules input moves the repositories to that pubrules instead, with a warning
     Given a stand-in "python"
     And a stand-in "pubfleet"

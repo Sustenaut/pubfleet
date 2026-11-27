@@ -36,12 +36,12 @@ if [ -n "${PUBRULES_TAG:-}" ]; then
   echo "::warning::The pubrules input overrides the pubrules pubfleet $tag is tested with: governed repositories move to pubrules $PUBRULES_TAG."
 else
   repo=${PUBRULES_REPO:-Sustenaut/pubrules}
-  latest=$(gh release view --repo "$repo" --json tagName --jq .tagName)
+  latest=$(gh release view --repo "$repo" --json tagName --jq .tagName || true)
   wheel="pubrules-${latest#v}-py3-none-any.whl"
   digest=$(gh release view "$latest" --repo "$repo" --json assets \
-    --jq ".assets[] | select(.name == \"$wheel\") | .digest" | sed 's/^sha256://')
+    --jq ".assets[] | select(.name == \"$wheel\") | .digest" | sed 's/^sha256://' || true)
   dir=$(mktemp -d)
-  if [ -z "$digest" ] || ! gh release download "$latest" --repo "$repo" --pattern "$wheel" --dir "$dir" \
+  if [ -z "$latest" ] || [ -z "$digest" ] || ! gh release download "$latest" --repo "$repo" --pattern "$wheel" --dir "$dir" \
       || [ "$(sha256sum "$dir/$wheel" | cut -d' ' -f1)" != "$digest" ]; then
     echo "::warning::pubrules $latest's wheel could not be read and checked against its sha256: staying on the pubrules pubfleet $tag is tested with."
   else
